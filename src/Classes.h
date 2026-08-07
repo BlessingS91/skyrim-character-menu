@@ -1,7 +1,8 @@
 #ifndef CLASSES_H
 #define CLASSES_H
 
-struct TESClass {
+struct TESClass
+{
     std::string name;
     std::vector<std::string> majorSkills;
     std::string specialization;
@@ -13,5 +14,6 @@ extern std::vector<TESClass> classicClassesConstellations;
 extern std::vector<TESClass> classicClassesFirmament;
 extern std::map<int, TESClass> apprenticeClasses;
 extern std::map<int, TESClass> apprenticeTraits;
+extern std::map<int, TESClass> paradigmReforgedClasses;
 
-#endif  // CLASSES_H
+#endif // CLASSES_H

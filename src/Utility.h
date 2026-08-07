@@ -45,20 +45,23 @@ namespace {
     static bool g_worldHidden = false;
 }*/
 
-struct QuestRequirement {
+struct QuestRequirement
+{
     std::string quest;
     std::int32_t stage = 0;
 };
 
-struct FactionRankDef {
-    bool requireAll = true;  // true = AND, false = OR
+struct FactionRankDef
+{
+    bool requireAll = true; // true = AND, false = OR
     std::vector<QuestRequirement> requirements;
     std::string maleTitle;
     std::string femaleTitle;
     bool rankDisplayOnly = false;
 };
 
-struct FactionDef {
+struct FactionDef
+{
     std::string id;
     std::string name;
     std::string gameFactionCheck;
@@ -70,7 +73,7 @@ static const std::string INI_FILE_PATH = "Data/Character Menu SE.ini";
 
 namespace logger = SKSE::log;
 
-extern RE::Actor* targetActor;
+extern RE::Actor *targetActor;
 extern bool forced3rdPerson;
 extern bool rotatedPlayer;
 extern bool fixCameraZoom;
@@ -81,27 +84,27 @@ extern float targetRotation;
 extern float targetZoomOffset;
 extern RE::NiPoint2 freeRotation;
 extern RE::NiPoint2 g_freeRotation;
-extern RE::TESCameraState* g_prevState;
+extern RE::TESCameraState *g_prevState;
 extern RE::NiPoint3 posOffsetExpected;
 extern RE::NiPointer<RE::NiFloatInterpolator> radialBlurStrength;
 extern float blurRadius;
-extern RE::Setting* overShoulderCombatPosX;
+extern RE::Setting *overShoulderCombatPosX;
 extern float fOverShoulderCombatPosX;
-extern RE::Setting* overShoulderCombatAddY;
+extern RE::Setting *overShoulderCombatAddY;
 extern float fOverShoulderCombatAddY;
-extern RE::Setting* overShoulderCombatPosZ;
+extern RE::Setting *overShoulderCombatPosZ;
 extern float fOverShoulderCombatPosZ;
-extern RE::Setting* autoVanityModeDelay;
+extern RE::Setting *autoVanityModeDelay;
 extern float fAutoVanityModeDelay;
-extern RE::Setting* overShoulderPosX;
+extern RE::Setting *overShoulderPosX;
 extern float fOverShoulderPosX;
-extern RE::Setting* overShoulderPosZ;
+extern RE::Setting *overShoulderPosZ;
 extern float fOverShoulderPosZ;
-extern RE::Setting* vanityModeMinDist;
+extern RE::Setting *vanityModeMinDist;
 extern float fVanityModeMinDist;
-extern RE::Setting* vanityModeMaxDist;
+extern RE::Setting *vanityModeMaxDist;
 extern float fVanityModeMaxDist;
-extern RE::Setting* mouseWheelZoomSpeed;
+extern RE::Setting *mouseWheelZoomSpeed;
 extern float fMouseWheelZoomSpeed;
 extern float worldFOV;
 extern bool playerHeadtrackingEnabled;
@@ -110,46 +113,48 @@ extern float fNewOverShoulderCombatAddY;
 extern float fNewOverShoulderCombatPosZ;
 extern float timescale;
 
-inline std::string GetActorValueKey(RE::ActorValue av) noexcept {
-    switch (av) {
-        case RE::ActorValue::kAlchemy:
-            return "alchemy";
-        case RE::ActorValue::kAlteration:
-            return "alteration";
-        case RE::ActorValue::kArchery:
-            return "archery";
-        case RE::ActorValue::kBlock:
-            return "block";
-        case RE::ActorValue::kConjuration:
-            return "conjuration";
-        case RE::ActorValue::kDestruction:
-            return "destruction";
-        case RE::ActorValue::kEnchanting:
-            return "enchanting";
-        case RE::ActorValue::kHeavyArmor:
-            return "heavyArmor";
-        case RE::ActorValue::kIllusion:
-            return "illusion";
-        case RE::ActorValue::kLightArmor:
-            return "lightArmor";
-        case RE::ActorValue::kLockpicking:
-            return "lockpicking";
-        case RE::ActorValue::kOneHanded:
-            return "oneHanded";
-        case RE::ActorValue::kPickpocket:
-            return "pickpocket";
-        case RE::ActorValue::kRestoration:
-            return "restoration";
-        case RE::ActorValue::kSmithing:
-            return "smithing";
-        case RE::ActorValue::kSneak:
-            return "sneak";
-        case RE::ActorValue::kSpeech:
-            return "speech";
-        case RE::ActorValue::kTwoHanded:
-            return "twoHanded";
-        default:
-            return {};
+inline std::string GetActorValueKey(RE::ActorValue av) noexcept
+{
+    switch (av)
+    {
+    case RE::ActorValue::kAlchemy:
+        return "alchemy";
+    case RE::ActorValue::kAlteration:
+        return "alteration";
+    case RE::ActorValue::kArchery:
+        return "archery";
+    case RE::ActorValue::kBlock:
+        return "block";
+    case RE::ActorValue::kConjuration:
+        return "conjuration";
+    case RE::ActorValue::kDestruction:
+        return "destruction";
+    case RE::ActorValue::kEnchanting:
+        return "enchanting";
+    case RE::ActorValue::kHeavyArmor:
+        return "heavyArmor";
+    case RE::ActorValue::kIllusion:
+        return "illusion";
+    case RE::ActorValue::kLightArmor:
+        return "lightArmor";
+    case RE::ActorValue::kLockpicking:
+        return "lockpicking";
+    case RE::ActorValue::kOneHanded:
+        return "oneHanded";
+    case RE::ActorValue::kPickpocket:
+        return "pickpocket";
+    case RE::ActorValue::kRestoration:
+        return "restoration";
+    case RE::ActorValue::kSmithing:
+        return "smithing";
+    case RE::ActorValue::kSneak:
+        return "sneak";
+    case RE::ActorValue::kSpeech:
+        return "speech";
+    case RE::ActorValue::kTwoHanded:
+        return "twoHanded";
+    default:
+        return {};
     }
 }
 
@@ -157,35 +162,37 @@ void SetupLog();
 float GetPlayerXPProgression();
 std::string GetInGameDate();
 int GetPlayerGold();
-bool HasPlayerSpellByEDID(RE::PlayerCharacter* player, const char* edid);
-bool IsPlayerVampire(RE::PlayerCharacter* player);
-const char* GetPlayerCondition();
-bool IsPluginLoaded(const std::string& pluginName);
+bool HasPlayerSpellByEDID(RE::PlayerCharacter *player, const char *edid);
+bool IsPlayerVampire(RE::PlayerCharacter *player);
+const char *GetPlayerCondition();
+bool IsPluginLoaded(const std::string &pluginName);
 void TogglePlayerControls(bool enable);
 bool GetSurvivalModeEnabled();
-void RotateCamera(RE::Actor* target);
+void RotateCamera(RE::Actor *target);
 void ResetCamera();
-void FreezeNPC(RE::Actor* a_actor);
-void UnfreezeNPC(RE::Actor* a_actor);
-const TESClass* GetBestMatchingClass(const std::vector<TESClass>& classes,
-                                     const std::unordered_map<std::string, float>& skillLevels);
-const TESClass* GetApprenticeClass(const std::map<int, TESClass>& classes);
-const TESClass* GetApprenticeTrait(const std::map<int, TESClass>& classes);
+void FreezeNPC(RE::Actor *a_actor);
+void UnfreezeNPC(RE::Actor *a_actor);
+const TESClass *GetBestMatchingClass(const std::vector<TESClass> &classes,
+                                     const std::unordered_map<std::string, float> &skillLevels);
+const TESClass *GetApprenticeClass(const std::map<int, TESClass> &classes);
+const TESClass *GetApprenticeTrait(const std::map<int, TESClass> &classes);
 
 void LoadFactionDefinitions();
-static bool IsQuestStageAtLeast(const std::string& questEdid, std::int32_t requiredStage);
-const std::vector<FactionDef>& GetFactionDefinitions();
-bool TryGetBestRankForFaction(const FactionDef& def, RE::SEXES::SEX gender, std::string& outRankTitle,
-                              bool& outRankDisplayOnly);
+static bool IsQuestStageAtLeast(const std::string &questEdid, std::int32_t requiredStage);
+const std::vector<FactionDef> &GetFactionDefinitions();
+bool TryGetBestRankForFaction(const FactionDef &def, RE::SEXES::SEX gender, std::string &outRankTitle,
+                              bool &outRankDisplayOnly);
 static inline bool IsWS(unsigned char c);
 static std::string TrimRightCopy(std::string s);
 std::string RemoveLastDotSentence(std::string text);
 std::string CollapsePercent(std::string s);
-bool IsPlayersMount(const RE::Actor* actor);
-bool IsTargetsMount(const RE::Actor* actor, RE::Actor* target);
+bool IsPlayersMount(const RE::Actor *actor);
+bool IsTargetsMount(const RE::Actor *actor, RE::Actor *target);
 void LoadDataFromINI();
-static bool IsPlayerInFactionWithRank(const std::string& factionEdid);
-//void HideWorld();
-//void ShowWorld();
+static bool IsPlayerInFactionWithRank(const std::string &factionEdid);
+bool IsModLoaded(const std::string &pluginName);
+const TESClass *GetParadigmClass(std::map<int, TESClass> &classes, RE::Actor *actor);
+// void HideWorld();
+// void ShowWorld();
 
-#endif  // UTILITY_H
+#endif // UTILITY_H

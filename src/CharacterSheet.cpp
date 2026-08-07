@@ -3,19 +3,21 @@
 #include "Utility.h"
 #include "editorID.hpp"
 #include "CustomSkills.h"
+#include "../integration/ChocolatePoiseIntegration.h"
 
-struct StandingStoneInfo {
+struct StandingStoneInfo
+{
     std::string name;
     std::string descriptionEditorId;
 };
 
 std::vector<RE::ActorValue> skills = {
-    RE::ActorValue::kAlchemy,    RE::ActorValue::kAlteration,  RE::ActorValue::kArchery,
-    RE::ActorValue::kBlock,      RE::ActorValue::kConjuration, RE::ActorValue::kDestruction,
-    RE::ActorValue::kEnchanting, RE::ActorValue::kHeavyArmor,  RE::ActorValue::kIllusion,
+    RE::ActorValue::kAlchemy, RE::ActorValue::kAlteration, RE::ActorValue::kArchery,
+    RE::ActorValue::kBlock, RE::ActorValue::kConjuration, RE::ActorValue::kDestruction,
+    RE::ActorValue::kEnchanting, RE::ActorValue::kHeavyArmor, RE::ActorValue::kIllusion,
     RE::ActorValue::kLightArmor, RE::ActorValue::kLockpicking, RE::ActorValue::kOneHanded,
     RE::ActorValue::kPickpocket, RE::ActorValue::kRestoration, RE::ActorValue::kSmithing,
-    RE::ActorValue::kSneak,      RE::ActorValue::kSpeech,      RE::ActorValue::kTwoHanded};
+    RE::ActorValue::kSneak, RE::ActorValue::kSpeech, RE::ActorValue::kTwoHanded};
 
 std::unordered_map<std::string, StandingStoneInfo> standingStoneEffects = {
     {"doomWarriorAbility", {"$Doomstone_Warrior", "doomWarriorMSG"}},
@@ -33,73 +35,78 @@ std::unordered_map<std::string, StandingStoneInfo> standingStoneEffects = {
     {"doomSerpentAbility", {"$Doomstone_Serpent", "doomSerpentMSG"}},
 };
 
-static bool TryMapAVToPlayerSkill(RE::ActorValue av, RE::PlayerCharacter::PlayerSkills::Data::Skill& out) {
+static bool TryMapAVToPlayerSkill(RE::ActorValue av, RE::PlayerCharacter::PlayerSkills::Data::Skill &out)
+{
     using Skill = RE::PlayerCharacter::PlayerSkills::Data::Skill;
 
-    switch (av) {
-        case RE::ActorValue::kOneHanded:
-            out = Skill::kOneHanded;
-            return true;
-        case RE::ActorValue::kTwoHanded:
-            out = Skill::kTwoHanded;
-            return true;
-        case RE::ActorValue::kArchery:
-            out = Skill::kArchery;
-            return true;
-        case RE::ActorValue::kBlock:
-            out = Skill::kBlock;
-            return true;
-        case RE::ActorValue::kSmithing:
-            out = Skill::kSmithing;
-            return true;
-        case RE::ActorValue::kHeavyArmor:
-            out = Skill::kHeavyArmor;
-            return true;
-        case RE::ActorValue::kLightArmor:
-            out = Skill::kLightArmor;
-            return true;
-        case RE::ActorValue::kPickpocket:
-            out = Skill::kPickpocket;
-            return true;
-        case RE::ActorValue::kLockpicking:
-            out = Skill::kLockpicking;
-            return true;
-        case RE::ActorValue::kSneak:
-            out = Skill::kSneak;
-            return true;
-        case RE::ActorValue::kAlchemy:
-            out = Skill::kAlchemy;
-            return true;
-        case RE::ActorValue::kSpeech:
-            out = Skill::kSpeech;
-            return true;
-        case RE::ActorValue::kAlteration:
-            out = Skill::kAlteration;
-            return true;
-        case RE::ActorValue::kConjuration:
-            out = Skill::kConjuration;
-            return true;
-        case RE::ActorValue::kDestruction:
-            out = Skill::kDestruction;
-            return true;
-        case RE::ActorValue::kIllusion:
-            out = Skill::kIllusion;
-            return true;
-        case RE::ActorValue::kRestoration:
-            out = Skill::kRestoration;
-            return true;
-        case RE::ActorValue::kEnchanting:
-            out = Skill::kEnchanting;
-            return true;
-        default:
-            return false;
+    switch (av)
+    {
+    case RE::ActorValue::kOneHanded:
+        out = Skill::kOneHanded;
+        return true;
+    case RE::ActorValue::kTwoHanded:
+        out = Skill::kTwoHanded;
+        return true;
+    case RE::ActorValue::kArchery:
+        out = Skill::kArchery;
+        return true;
+    case RE::ActorValue::kBlock:
+        out = Skill::kBlock;
+        return true;
+    case RE::ActorValue::kSmithing:
+        out = Skill::kSmithing;
+        return true;
+    case RE::ActorValue::kHeavyArmor:
+        out = Skill::kHeavyArmor;
+        return true;
+    case RE::ActorValue::kLightArmor:
+        out = Skill::kLightArmor;
+        return true;
+    case RE::ActorValue::kPickpocket:
+        out = Skill::kPickpocket;
+        return true;
+    case RE::ActorValue::kLockpicking:
+        out = Skill::kLockpicking;
+        return true;
+    case RE::ActorValue::kSneak:
+        out = Skill::kSneak;
+        return true;
+    case RE::ActorValue::kAlchemy:
+        out = Skill::kAlchemy;
+        return true;
+    case RE::ActorValue::kSpeech:
+        out = Skill::kSpeech;
+        return true;
+    case RE::ActorValue::kAlteration:
+        out = Skill::kAlteration;
+        return true;
+    case RE::ActorValue::kConjuration:
+        out = Skill::kConjuration;
+        return true;
+    case RE::ActorValue::kDestruction:
+        out = Skill::kDestruction;
+        return true;
+    case RE::ActorValue::kIllusion:
+        out = Skill::kIllusion;
+        return true;
+    case RE::ActorValue::kRestoration:
+        out = Skill::kRestoration;
+        return true;
+    case RE::ActorValue::kEnchanting:
+        out = Skill::kEnchanting;
+        return true;
+    default:
+        return false;
     }
 }
 
-namespace Scaleform {
-    CharacterSheet::CharacterSheet() {
+namespace Scaleform
+{
+    CharacterSheet::CharacterSheet()
+    {
         auto scaleformManager = RE::BSScaleformManager::GetSingleton();
-        scaleformManager->LoadMovieEx(this, MENU_PATH, [this](RE::GFxMovieDef* a_def) {
+        scaleformManager->LoadMovieEx(this, MENU_PATH, [this](RE::GFxMovieDef *a_def)
+                                      {
             using StateType = RE::GFxState::StateType;
 
             fxDelegate.reset(new RE::FxDelegate());
@@ -109,8 +116,7 @@ namespace Scaleform {
 
             auto logger = new Logger<CharacterSheet>();
             a_def->SetState(StateType::kLog, logger);
-            logger->Release();
-        });
+            logger->Release(); });
 
         inputContext = Context::kMenuMode;
         depthPriority = 3;
@@ -119,66 +125,79 @@ namespace Scaleform {
                       RE::UI_MENU_FLAGS::kTopmostRenderedMenu, RE::UI_MENU_FLAGS::kUsesMenuContext,
                       RE::UI_MENU_FLAGS::kRequiresUpdate, RE::UI_MENU_FLAGS::kUpdateUsesCursor);
 
-        if (!RE::BSInputDeviceManager::GetSingleton()->IsGamepadEnabled()) {
+        if (!RE::BSInputDeviceManager::GetSingleton()->IsGamepadEnabled())
+        {
             menuFlags |= RE::UI_MENU_FLAGS::kUsesCursor;
         }
     }
 
-    void CharacterSheet::Register() {
+    void CharacterSheet::Register()
+    {
         auto ui = RE::UI::GetSingleton();
-        if (ui) {
+        if (ui)
+        {
             ui->Register(CharacterSheet::MENU_NAME, Creator);
             logger::debug("Registered {}", CharacterSheet::MENU_NAME);
         }
     }
 
-    void CharacterSheet::Show() {
+    void CharacterSheet::Show()
+    {
         auto uiMessageQueue = RE::UIMessageQueue::GetSingleton();
-        if (uiMessageQueue) {
+        if (uiMessageQueue)
+        {
             uiMessageQueue->AddMessage(CharacterSheet::MENU_NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
-            //RE::UIBlurManager::GetSingleton()->IncrementBlurCount();
-        }
-    }
-    
-    void CharacterSheet::Hide() {
-        auto uiMessageQueue = RE::UIMessageQueue::GetSingleton();
-        if (uiMessageQueue) {
-            uiMessageQueue->AddMessage(CharacterSheet::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
-            RE::PlaySound("UIJournalClose");
-            //RE::UIBlurManager::GetSingleton()->DecrementBlurCount();
+            // RE::UIBlurManager::GetSingleton()->IncrementBlurCount();
         }
     }
 
-    void CharacterSheet::Accept(RE::FxDelegateHandler::CallbackProcessor* a_cbReg) {
+    void CharacterSheet::Hide()
+    {
+        auto uiMessageQueue = RE::UIMessageQueue::GetSingleton();
+        if (uiMessageQueue)
+        {
+            uiMessageQueue->AddMessage(CharacterSheet::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+            RE::PlaySound("UIJournalClose");
+            // RE::UIBlurManager::GetSingleton()->DecrementBlurCount();
+        }
+    }
+
+    void CharacterSheet::Accept(RE::FxDelegateHandler::CallbackProcessor *a_cbReg)
+    {
         a_cbReg->Process("PlaySound", PlaySound);
         a_cbReg->Process("CloseMenu", CloseMenu);
         a_cbReg->Process("OpenSkillsMenu", OpenSkillsMenu);
         a_cbReg->Process("SaveFactionTitle", SaveFactionTitle);
     }
 
-    void CharacterSheet::PlaySound(const RE::FxDelegateArgs& a_params) {
+    void CharacterSheet::PlaySound(const RE::FxDelegateArgs &a_params)
+    {
         assert(a_params.GetArgCount() == 1);
         assert(a_params[0].IsString());
 
         RE::PlaySound(a_params[0].GetString());
     }
 
-    void CharacterSheet::CloseMenu(const RE::FxDelegateArgs& a_params) {
+    void CharacterSheet::CloseMenu(const RE::FxDelegateArgs &a_params)
+    {
         assert(a_params.GetArgCount() == 0);
 
         Hide();
     }
 
-    void CharacterSheet::OpenSkillsMenu(const RE::FxDelegateArgs&) {
-        auto* q = RE::UIMessageQueue::GetSingleton();
-        if (!q) {
+    void CharacterSheet::OpenSkillsMenu(const RE::FxDelegateArgs &)
+    {
+        auto *q = RE::UIMessageQueue::GetSingleton();
+        if (!q)
+        {
             return;
         }
 
-        auto* fadeOut = RE::TESForm::LookupByEditorID<RE::TESImageSpaceModifier>("FadeToBlackImod");
-        auto* fadeIn = RE::TESForm::LookupByEditorID<RE::TESImageSpaceModifier>("FadeToBlackBackImod");
+        auto *fadeOut = RE::TESForm::LookupByEditorID<RE::TESImageSpaceModifier>("FadeToBlackImod");
+        auto *fadeIn = RE::TESForm::LookupByEditorID<RE::TESImageSpaceModifier>("FadeToBlackBackImod");
 
-        if (fadeIn) {
+        if (fadeIn)
+        {
             RE::ImageSpaceModifierInstanceForm::Trigger(fadeIn, 1.0f, nullptr);
         }
 
@@ -187,11 +206,12 @@ namespace Scaleform {
         q->AddMessage(RE::HUDMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
     }
 
-    void CharacterSheet::SaveFactionTitle(const RE::FxDelegateArgs& a_params) { 
+    void CharacterSheet::SaveFactionTitle(const RE::FxDelegateArgs &a_params)
+    {
         assert(a_params.GetArgCount() == 3);
 
-        auto* rankC = a_params[0].GetString();
-        auto* facC = a_params[1].GetString();
+        auto *rankC = a_params[0].GetString();
+        auto *facC = a_params[1].GetString();
         bool rankOnlyC = a_params[2].GetBool();
 
         g_savedTitleRank = rankC ? rankC : "";
@@ -200,20 +220,24 @@ namespace Scaleform {
         g_hasSavedTitle = true;
     }
 
-    void CharacterSheet::SetGenericData(RE::Actor* target, RE::GPtr<RE::IMenu> menu) {
+    void CharacterSheet::SetGenericData(RE::Actor *target, RE::GPtr<RE::IMenu> menu)
+    {
         // GENERIC DATA
         int level = target->GetLevel();
         auto name = target->GetName();
         RE::BSString raceDesc;
-        const char* race;
-        if (target->IsPlayerRef()) {
+        const char *race;
+        if (target->IsPlayerRef())
+        {
             // Have to use GetRaceData instead of GetRace, because GetRace will return
             // "Werewolf" in beast form while GetRaceData will always return the player's
             // original race
             auto player = RE::PlayerCharacter::GetSingleton();
             race = player->GetRaceData().charGenRace->GetName();
             player->GetRaceData().charGenRace->GetDescription(raceDesc, player->GetRaceData().charGenRace);
-        } else {
+        }
+        else
+        {
             race = target->GetRace()->GetName();
             target->GetRace()->GetDescription(raceDesc, target->GetRace());
         }
@@ -224,24 +248,29 @@ namespace Scaleform {
         // BIRTHSIGN
         auto activeEffects = target->AsMagicTarget()->GetActiveEffectList();
         std::string constellation;
-        RE::BGSMessage* constellationMessage;
+        RE::BGSMessage *constellationMessage;
         RE::BSString constellationDesc;
 
-        if (activeEffects) {
-            for (auto* effect : *activeEffects) {
-                if (!effect || !effect->spell) {
+        if (activeEffects)
+        {
+            for (auto *effect : *activeEffects)
+            {
+                if (!effect || !effect->spell)
+                {
                     continue;
                 }
 
-                auto* spell = effect->spell;
+                auto *spell = effect->spell;
                 std::string edid = clib_util::editorID::get_editorID(spell);
-                if (edid.empty()) {
+                if (edid.empty())
+                {
                     continue;
                 }
 
                 auto it = standingStoneEffects.find(edid);
-                if (it != standingStoneEffects.end()) {
-                    const auto& info = it->second;
+                if (it != standingStoneEffects.end())
+                {
+                    const auto &info = it->second;
 
                     logger::trace("Constellation (effect): {}", info.name);
                     constellation = info.name;
@@ -258,14 +287,18 @@ namespace Scaleform {
         }
 
         // Fallback if not found: powers (Ritual/Shadow/Tower/Serpent)
-        if (constellation.empty()) {
-            auto hasStoneSpell = [&](const std::string& spellEdid) {
-                auto* spell = RE::TESForm::LookupByEditorID<RE::SpellItem>(spellEdid);
+        if (constellation.empty())
+        {
+            auto hasStoneSpell = [&](const std::string &spellEdid)
+            {
+                auto *spell = RE::TESForm::LookupByEditorID<RE::SpellItem>(spellEdid);
                 return spell && target->HasSpell(spell);
             };
 
-            for (const auto& [spellEdid, info] : standingStoneEffects) {
-                if (hasStoneSpell(spellEdid)) {
+            for (const auto &[spellEdid, info] : standingStoneEffects)
+            {
+                if (hasStoneSpell(spellEdid))
+                {
                     logger::trace("Constellation (spell): {}", info.name);
                     constellation = info.name;
                     constellationMessage = RE::TESForm::LookupByEditorID<RE::BGSMessage>(info.descriptionEditorId);
@@ -280,7 +313,8 @@ namespace Scaleform {
             }
         }
 
-        if (constellation.empty()) {
+        if (constellation.empty())
+        {
             constellation = "-";
             constellationDesc = "";
         }
@@ -300,7 +334,8 @@ namespace Scaleform {
                               genericData.size());
     }
 
-    void CharacterSheet::SetAttributes(RE::Actor* target, RE::GPtr<RE::IMenu> menu) {
+    void CharacterSheet::SetAttributes(RE::Actor *target, RE::GPtr<RE::IMenu> menu)
+    {
         // ATTRIBUTES
         std::array<RE::GFxValue, 9> attributesData;
         // Health
@@ -326,8 +361,8 @@ namespace Scaleform {
         float stamina = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
 
         logger::trace("Attributes:\n---Health: {}/{} ({})\n---Magicka: {}/{} ({})\n---Stamina: {}/{} ({})", health,
-                     maxHealth, maxHealth - baseHealth, magicka, maxMagicka, maxMagicka - baseMagicka, stamina,
-                     maxStamina, maxStamina - baseStamina);
+                      maxHealth, maxHealth - baseHealth, magicka, maxMagicka, maxMagicka - baseMagicka, stamina,
+                      maxStamina, maxStamina - baseStamina);
 
         attributesData[0] = health;
         attributesData[1] = maxHealth;
@@ -342,7 +377,7 @@ namespace Scaleform {
                               attributesData.size());
 
         // STATS
-        std::array<RE::GFxValue, 12> statsData;
+        std::array<RE::GFxValue, 13> statsData;
         float healRate = (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealRate) / 100) * maxHealth;
         float magickaRate =
             (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagickaRate) / 100) * maxMagicka;
@@ -361,13 +396,35 @@ namespace Scaleform {
         float frostResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistFrost);
         float shockResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistShock);
         float diseaseResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistDisease);
+        float poiseDefense = PoiseIntegration::GetArmorPoiseDefense(target);
+
         logger::trace(
-            "Heal rate: {}\nMagicka rate: {}\nStamina rate: {}\nSpeed mult: {}\nWeapon speed mult: {}\nCritical hit "
-            "chance: "
-            "{}\nPoison resist: {}\nMagic resist: {}\nFire resist: {}\nFrost resist: {}\nShock resist: {}\nDisease "
-            "resist:{}",
-            healRate, magickaRate, staminaRate, speedMult, weaponSpeedMult, critChance, poisonResist, magicResist,
-            fireResist, frostResist, shockResist, diseaseResist);
+            "Heal rate: {}\n"
+            "Magicka rate: {}\n"
+            "Stamina rate: {}\n"
+            "Speed mult: {}\n"
+            "Weapon speed mult: {}\n"
+            "Critical hit chance: {}\n"
+            "Poison resist: {}\n"
+            "Magic resist: {}\n"
+            "Fire resist: {}\n"
+            "Frost resist: {}\n"
+            "Shock resist: {}\n"
+            "Disease resist: {}\n"
+            "Poise defense: {}",
+            healRate,
+            magickaRate,
+            staminaRate,
+            speedMult,
+            weaponSpeedMult,
+            critChance,
+            poisonResist,
+            magicResist,
+            fireResist,
+            frostResist,
+            shockResist,
+            diseaseResist,
+            poiseDefense);
 
         statsData[0] = healRate;
         statsData[1] = magickaRate;
@@ -381,14 +438,17 @@ namespace Scaleform {
         statsData[9] = frostResist;
         statsData[10] = shockResist;
         statsData[11] = diseaseResist;
+        statsData[12] = poiseDefense;
         menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetStats", nullptr, statsData.data(), statsData.size());
     }
 
-    void CharacterSheet::SetFactions(RE::Actor* target, RE::GPtr<RE::IMenu> menu) {
+    void CharacterSheet::SetFactions(RE::Actor *target, RE::GPtr<RE::IMenu> menu)
+    {
         RE::GFxValue factionsArray;
         menu->uiMovie->CreateArray(&factionsArray);
 
-        if (!target->IsPlayerRef()) {
+        if (!target->IsPlayerRef())
+        {
             std::array<RE::GFxValue, 1> factionsData;
             factionsData[0] = factionsArray;
             menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetFactions", nullptr, factionsData.data(),
@@ -398,10 +458,12 @@ namespace Scaleform {
 
         auto playerGender = target->GetActorBase()->GetSex();
 
-        for (const auto& def : GetFactionDefinitions()) {
+        for (const auto &def : GetFactionDefinitions())
+        {
             std::string rankTitle;
             bool rankOnly = false;
-            if (!TryGetBestRankForFaction(def, playerGender, rankTitle, rankOnly)) {
+            if (!TryGetBestRankForFaction(def, playerGender, rankTitle, rankOnly))
+            {
                 continue;
             }
 
@@ -422,7 +484,8 @@ namespace Scaleform {
         factionsData[0] = factionsArray;
         menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetFactions", nullptr, factionsData.data(), factionsData.size());
 
-        if (g_hasSavedTitle) {
+        if (g_hasSavedTitle)
+        {
             std::array<RE::GFxValue, 3> args;
             args[0] = g_savedTitleRank.c_str();
             args[1] = g_savedTitleFaction.c_str();
@@ -431,23 +494,27 @@ namespace Scaleform {
         }
     }
 
-    void CharacterSheet::SetSkills(RE::Actor* target, RE::GPtr<RE::IMenu> menu) {
+    void CharacterSheet::SetSkills(RE::Actor *target, RE::GPtr<RE::IMenu> menu)
+    {
         // SKILLS
         RE::GFxValue skillsArray;
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        auto* playerSkills = player->GetInfoRuntimeData().skills;
-        auto* playerSkillsData = (playerSkills && playerSkills->data) ? playerSkills->data : nullptr;
+        auto *player = RE::PlayerCharacter::GetSingleton();
+        auto *playerSkills = player->GetInfoRuntimeData().skills;
+        auto *playerSkillsData = (playerSkills && playerSkills->data) ? playerSkills->data : nullptr;
 
         auto avList = RE::ActorValueList::GetSingleton();
-        if (!avList) {
+        if (!avList)
+        {
             return;
         }
-        std::unordered_map<std::string, float> skillLevels;  // used for class extrapolation
+        std::unordered_map<std::string, float> skillLevels; // used for class extrapolation
 
         menu->uiMovie->CreateArray(&skillsArray);
-        for (auto av : skills) {
+        for (auto av : skills)
+        {
             auto avInfo = avList->GetActorValue(av);
-            if (avInfo) {
+            if (avInfo)
+            {
                 RE::GFxValue skill;
                 menu->uiMovie->CreateObject(&skill);
                 auto name = avInfo->GetFullName();
@@ -458,29 +525,35 @@ namespace Scaleform {
                 // XP
                 int xpFrame = 200;
 
-                if (playerSkillsData) {
+                if (playerSkillsData)
+                {
                     RE::PlayerCharacter::PlayerSkills::Data::Skill s;
-                    if (TryMapAVToPlayerSkill(av, s)) {
-                        const auto& sd = playerSkillsData->skills[s];
-                        if (sd.levelThreshold > 0.0f) {
+                    if (TryMapAVToPlayerSkill(av, s))
+                    {
+                        const auto &sd = playerSkillsData->skills[s];
+                        if (sd.levelThreshold > 0.0f)
+                        {
                             float progress = std::clamp(sd.xp / sd.levelThreshold, 0.0f, 1.0f);
                             xpFrame = 200 - static_cast<int>(std::round(progress * 200.0f));
                         }
                     }
                 }
 
-                std::string key = GetActorValueKey(av);  // default
+                std::string key = GetActorValueKey(av); // default
 
-                if (IsPluginLoaded("HandToHand")) {
-                    if (av == RE::ActorValue::kLockpicking) {
+                if (IsPluginLoaded("HandToHand"))
+                {
+                    if (av == RE::ActorValue::kLockpicking)
+                    {
                         key = "handtohandmag";
                     }
-                    else if (av == RE::ActorValue::kPickpocket) {
+                    else if (av == RE::ActorValue::kPickpocket)
+                    {
                         key = "securitymag";
                     }
                 }
 
-                skillLevels[key] = value;         // used for class extrapolation
+                skillLevels[key] = value; // used for class extrapolation
                 logger::trace("{} ({}): {}\nFrame: {}", name, key, value, xpFrame);
                 skill.SetMember("skillName", name);
                 skill.SetMember("level", value);
@@ -491,7 +564,8 @@ namespace Scaleform {
             }
         }
 
-        if (IsPluginLoaded("Constellations") && target->IsPlayerRef()) {
+        if (IsPluginLoaded("Constellations") && target->IsPlayerRef())
+        {
             logger::info("Constellations plugin detected, loading additional classes.");
 
             // Hand to Hand
@@ -533,12 +607,13 @@ namespace Scaleform {
             skillsArray.PushBack(handtohand);
             skillsArray.PushBack(athletics);
             skillsArray.PushBack(sorcery);
-            skillLevels["handToHand"] = handtohandValue;  // used for class extrapolation
-            skillLevels["athletics"] = athleticsValue;    // used for class extrapolation
-            skillLevels["sorcery"] = sorceryValue;        // used for class extrapolation
+            skillLevels["handToHand"] = handtohandValue; // used for class extrapolation
+            skillLevels["athletics"] = athleticsValue;   // used for class extrapolation
+            skillLevels["sorcery"] = sorceryValue;       // used for class extrapolation
         }
 
-        if (IsPluginLoaded("Firmament") && target->IsPlayerRef()) {
+        if (IsPluginLoaded("Firmament") && target->IsPlayerRef())
+        {
             logger::info("Firmament plugin detected, loading additional classes.");
 
             // Horseman
@@ -580,24 +655,39 @@ namespace Scaleform {
             skillsArray.PushBack(horseman);
             skillsArray.PushBack(exploration);
             skillsArray.PushBack(philosophy);
-            skillLevels["horseman"] = horsemanValue;        // used for class extrapolation
-            skillLevels["exploration"] = explorationValue;  // used for class extrapolation
-            skillLevels["philosophy"] = philosophyValue;    // used for class extrapolation
+            skillLevels["horseman"] = horsemanValue;       // used for class extrapolation
+            skillLevels["exploration"] = explorationValue; // used for class extrapolation
+            skillLevels["philosophy"] = philosophyValue;   // used for class extrapolation
         }
 
-        const TESClass* match;
-        TESClass defaultTrait{ "", {}, "", "" };
+        const TESClass *match;
+        TESClass defaultTrait{"", {}, "", ""};
 
-        const TESClass* traitMatch = &defaultTrait;
-        if (IsPluginLoaded("Firmament")) {
+        const TESClass *traitMatch = &defaultTrait;
+
+        // Base class selection
+        if (IsPluginLoaded("Firmament"))
+        {
             match = GetBestMatchingClass(classicClassesFirmament, skillLevels);
-        } else if (IsPluginLoaded("Constellations")) {
+        }
+        else if (IsPluginLoaded("Constellations"))
+        {
             match = GetBestMatchingClass(classicClassesConstellations, skillLevels);
-        } else {
+        }
+        else
+        {
             match = GetBestMatchingClass(classicClasses, skillLevels);
         }
 
-        if (IsPluginLoaded("Apprentice")) {
+        // Overrides
+        if (IsModLoaded("Paradigm Reforged.esp"))
+        {
+            logger::info("Paradigm Reforged detected, using Paradigm classes.");
+
+            match = GetParadigmClass(paradigmReforgedClasses, target);
+        }
+        else if (IsPluginLoaded("Apprentice"))
+        {
             match = GetApprenticeClass(apprenticeClasses);
             traitMatch = GetApprenticeTrait(apprenticeTraits);
         }
@@ -613,25 +703,31 @@ namespace Scaleform {
         menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetSkills", nullptr, skillsData.data(), skillsData.size());
     }
 
-    void CharacterSheet::SetMiscValues(RE::Actor* target, RE::GPtr<RE::IMenu> menu) {
+    void CharacterSheet::SetMiscValues(RE::Actor *target, RE::GPtr<RE::IMenu> menu)
+    {
         std::array<RE::GFxValue, 5> miscData;
 
         int playerGold = GetPlayerGold();
-        //int armorRating = target->CalcArmorRating();
         int armorRating = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kDamageResist);
         float playerWeight = target->GetWeightInContainer();
         int carryWeight = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCarryWeight);
+
         int warmth = -1;
-        if (GetSurvivalModeEnabled()) {
+        if (GetSurvivalModeEnabled())
+        {
             warmth = target->GetWarmthRating();
         }
-        logger::trace("Gold: {}\nArmor rating: {}\nCarry weight: {}/{}\nWarmth: {}", playerGold, armorRating,
-                      playerWeight, carryWeight, warmth);
+
         miscData[0] = playerGold;
         miscData[1] = armorRating;
         miscData[2] = playerWeight;
         miscData[3] = carryWeight;
         miscData[4] = warmth;
-        menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetMiscData", nullptr, miscData.data(), miscData.size());
+
+        menu->uiMovie->Invoke(
+            "_root.CharacterSheet_mc.SetMiscData",
+            nullptr,
+            miscData.data(),
+            miscData.size());
     }
 }

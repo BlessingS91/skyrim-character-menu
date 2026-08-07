@@ -4,7 +4,7 @@
 #define SMOOTHCAM_API_COMMONLIB
 #include "SmoothCamAPI.h"
 #include "editorID.hpp"
-//#include "BSSceneGraph.h"
+// #include "BSSceneGraph.h"
 
 #include <Windows.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -27,7 +27,7 @@ int enableBlur;
 bool g_isUltraWide = false;
 bool lowercaseName = false;
 
-RE::Actor* targetActor;
+RE::Actor *targetActor;
 bool forced3rdPerson;
 bool rotatedPlayer = false;
 bool fixCameraZoom;
@@ -37,29 +37,29 @@ float targetRotation;
 float targetZoomOffset;
 RE::NiPoint2 freeRotation;
 RE::NiPoint2 g_freeRotation;
-RE::TESCameraState* g_prevState = nullptr;
+RE::TESCameraState *g_prevState = nullptr;
 RE::NiPoint3 posOffsetExpected;
 RE::NiPointer<RE::NiFloatInterpolator> radialBlurStrength;
 float blurRadius;
-RE::Setting* overShoulderCombatPosX;
+RE::Setting *overShoulderCombatPosX;
 float fOverShoulderCombatPosX;
-RE::Setting* overShoulderCombatAddY;
+RE::Setting *overShoulderCombatAddY;
 float fOverShoulderCombatAddY;
-RE::Setting* overShoulderCombatPosZ;
+RE::Setting *overShoulderCombatPosZ;
 float fOverShoulderCombatPosZ;
-RE::Setting* autoVanityModeDelay;
+RE::Setting *autoVanityModeDelay;
 float fAutoVanityModeDelay;
-RE::Setting* overShoulderPosX;
+RE::Setting *overShoulderPosX;
 float fOverShoulderPosX;
-RE::Setting* overShoulderPosZ;
+RE::Setting *overShoulderPosZ;
 float fOverShoulderPosZ;
-RE::Setting* vanityModeMinDist;
+RE::Setting *vanityModeMinDist;
 float fVanityModeMinDist;
-RE::Setting* vanityModeMaxDist;
+RE::Setting *vanityModeMaxDist;
 float fVanityModeMaxDist;
-RE::Setting* mouseWheelZoomSpeed;
+RE::Setting *mouseWheelZoomSpeed;
 float fMouseWheelZoomSpeed;
-RE::Setting* togglePOVDelay;
+RE::Setting *togglePOVDelay;
 float fTogglePOVDelay;
 float worldFOV;
 bool playerHeadtrackingEnabled;
@@ -68,9 +68,11 @@ float fNewOverShoulderCombatAddY;
 float fNewOverShoulderCombatPosZ;
 float timescale;
 
-void SetupLog() {
+void SetupLog()
+{
     auto logsFolder = SKSE::log::log_directory();
-    if (!logsFolder) SKSE::stl::report_and_fail("SKSE log_directory not provided, logs disabled.");
+    if (!logsFolder)
+        SKSE::stl::report_and_fail("SKSE log_directory not provided, logs disabled.");
     auto pluginName = SKSE::PluginDeclaration::GetSingleton()->GetName();
     auto logFilePath = *logsFolder / std::format("{}.log", pluginName);
     auto fileLoggerPtr = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFilePath.string(), true);
@@ -80,7 +82,8 @@ void SetupLog() {
     spdlog::flush_on(spdlog::level::trace);
 }
 
-float GetPlayerXPProgression() {
+float GetPlayerXPProgression()
+{
     auto player = RE::PlayerCharacter::GetSingleton();
     auto playerXP = player->GetInfoRuntimeData().skills->data->xp;
     auto playerLevelThreshold = player->GetInfoRuntimeData().skills->data->levelThreshold;
@@ -88,7 +91,8 @@ float GetPlayerXPProgression() {
     return levelProgression;
 }
 
-std::string GetInGameDate() {
+std::string GetInGameDate()
+{
     auto calendar = RE::Calendar::GetSingleton();
     char datetime[504];
     calendar->GetTimeDateString(datetime, 0x200u, 1);
@@ -96,26 +100,30 @@ std::string GetInGameDate() {
     return dt;
 }
 
-int GetPlayerGold() {
+int GetPlayerGold()
+{
     auto player = RE::PlayerCharacter::GetSingleton();
-    if (!player) {
+    if (!player)
+    {
         logger::warn("Player not found.");
         return 0;
     }
 
-    auto* goldForm = RE::TESForm::LookupByEditorID("Gold001");
-    if (!goldForm) {
+    auto *goldForm = RE::TESForm::LookupByEditorID("Gold001");
+    if (!goldForm)
+    {
         logger::warn("Gold form not found.");
         return 0;
     }
 
-    auto* goldObject = goldForm->As<RE::TESBoundObject>();
-    if (!goldObject) {
+    auto *goldObject = goldForm->As<RE::TESBoundObject>();
+    if (!goldObject)
+    {
         logger::warn("Gold form is not a bound object.");
         return 0;
     }
 
-    const auto& invCounts = player->GetInventoryCounts();
+    const auto &invCounts = player->GetInventoryCounts();
     auto it = invCounts.find(goldObject);
     int totalGold = (it != invCounts.end()) ? it->second : 0;
 
@@ -123,56 +131,83 @@ int GetPlayerGold() {
     return totalGold;
 }
 
-bool HasPlayerSpellByEDID(RE::PlayerCharacter* player, const char* edid) {
-    if (!player || !edid || !*edid) {
+bool HasPlayerSpellByEDID(RE::PlayerCharacter *player, const char *edid)
+{
+    if (!player || !edid || !*edid)
+    {
         return false;
     }
-    auto* spell = RE::TESForm::LookupByEditorID<RE::SpellItem>(edid);
+    auto *spell = RE::TESForm::LookupByEditorID<RE::SpellItem>(edid);
     return spell && player->HasSpell(spell);
 }
 
-bool IsPlayerVampire(RE::PlayerCharacter* player) {
-    if (!player) {
+bool IsPlayerVampire(RE::PlayerCharacter *player)
+{
+    if (!player)
+    {
         return false;
     }
 
-    auto* vampKW = RE::TESForm::LookupByEditorID<RE::BGSKeyword>("Vampire");
+    auto *vampKW = RE::TESForm::LookupByEditorID<RE::BGSKeyword>("Vampire");
     return vampKW && player->HasKeyword(vampKW);
 }
 
-const char* GetPlayerCondition() {
-    auto* player = RE::PlayerCharacter::GetSingleton();
-    if (!player) {
+const char *GetPlayerCondition()
+{
+    auto *player = RE::PlayerCharacter::GetSingleton();
+    if (!player)
+    {
         return "";
     }
 
-    if (HasPlayerSpellByEDID(player, "BOS_WerebearDisease")) {
+    if (HasPlayerSpellByEDID(player, "BOS_WerebearDisease"))
+    {
         return "werebear";
     }
-    if (HasPlayerSpellByEDID(player, "WerewolfChange")) {
+    if (HasPlayerSpellByEDID(player, "WerewolfChange"))
+    {
         return "werewolf";
     }
-    if (IsPlayerVampire(player)) {
+    if (IsPlayerVampire(player))
+    {
         return "vampire";
     }
 
     return "";
 }
 
-bool IsPluginLoaded(const std::string& pluginName) {
+bool IsPluginLoaded(const std::string &pluginName)
+{
     std::string dllName = pluginName + ".dll";
 
     HMODULE module = GetModuleHandleA(dllName.c_str());
-    if (module) {
+    if (module)
+    {
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 }
 
-void TogglePlayerControls(bool enable) {
+//.esp detection
+bool IsModLoaded(const std::string &pluginName)
+{
+    auto *dataHandler = RE::TESDataHandler::GetSingleton();
+    if (!dataHandler)
+    {
+        return false;
+    }
+
+    return dataHandler->LookupModByName(pluginName.c_str()) != nullptr;
+}
+
+void TogglePlayerControls(bool enable)
+{
     auto playerControls = RE::PlayerControls::GetSingleton();
-    if (playerControls) {
+    if (playerControls)
+    {
         playerControls->lookHandler->inputEventHandlingEnabled = enable;
         playerControls->attackBlockHandler->inputEventHandlingEnabled = enable;
         playerControls->autoMoveHandler->inputEventHandlingEnabled = enable;
@@ -187,75 +222,92 @@ void TogglePlayerControls(bool enable) {
     }
 }
 
-bool GetSurvivalModeEnabled() {
+bool GetSurvivalModeEnabled()
+{
     static const std::string survivalEnabled = "Survival_ModeEnabled";
-    if (auto form = RE::TESForm::LookupByEditorID(survivalEnabled)) {
+    if (auto form = RE::TESForm::LookupByEditorID(survivalEnabled))
+    {
         auto formID = form->GetFormID();
         auto survivalModeGlobal = RE::TESForm::LookupByID<RE::TESGlobal>(formID);
         auto value = survivalModeGlobal->value;
-        if (value == 1.0) {
+        if (value == 1.0)
+        {
             return true;
-        } else {
+        }
+        else
+        {
             return false;
         }
-    } else {
+    }
+    else
+    {
         return false;
     }
 }
 
-bool IsPlayersMount(const RE::Actor* actor) {
-    if (!actor) {
+bool IsPlayersMount(const RE::Actor *actor)
+{
+    if (!actor)
+    {
         return false;
     }
 
     RE::NiPointer<RE::Actor> playerMount;
     const auto player = RE::PlayerCharacter::GetSingleton();
-    if (player->GetMount(playerMount)) {
+    if (player->GetMount(playerMount))
+    {
         return playerMount.get() == actor;
     }
 
     return false;
 }
 
-bool IsTargetsMount(const RE::Actor* actor, RE::Actor* target) {
-    if (!actor) {
+bool IsTargetsMount(const RE::Actor *actor, RE::Actor *target)
+{
+    if (!actor)
+    {
         return false;
     }
 
     RE::NiPointer<RE::Actor> targetsMount;
-    if (target->GetMount(targetsMount)) {
+    if (target->GetMount(targetsMount))
+    {
         return targetsMount.get() == actor;
     }
 
     return false;
 }
 
-static bool IsMannequin(const RE::Actor* actor) {
-    if (actor->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("ManakinRace")) {
+static bool IsMannequin(const RE::Actor *actor)
+{
+    if (actor->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("ManakinRace"))
+    {
         return true;
     }
     return false;
 }
 
-void LoadDataFromINI() {
+void LoadDataFromINI()
+{
     CSimpleIniA ini;
     ini.SetUnicode();
     SI_Error rc = ini.LoadFile(INI_FILE_PATH.c_str());
-    if (rc < 0) {
+    if (rc < 0)
+    {
         logger::error("Failed to load INI file: {}", INI_FILE_PATH);
         return;
-    } 
+    }
 
-    const char* keycodeStr = ini.GetValue("General", "iOpenMenuKeycode", "49"); // N
-    const char* detailsStr = ini.GetValue("General", "iShowDetailsKeycode", "33");  // F
-    const char* actionStr = ini.GetValue("General", "iActionButtonKeycode", "34");  // G
-    const char* navLeftStr = ini.GetValue("General", "iNavLeft", "16"); // Q
-    const char* navRightStr = ini.GetValue("General", "iNavRight", "19"); // R
-    const char* detailsGamepadStr = ini.GetValue("General", "iShowDetailsGamepadKeycode", "273");  // RS
-    const char* actionGamepadStr = ini.GetValue("General", "iActionButtonGamepadKeycode", "279");  // Y
-    const char* navLeftGamepadStr = ini.GetValue("General", "iNavLeftGamepad", "274"); // LB
-    const char* navRightGamepadStr = ini.GetValue("General", "iNavRightGamepad", "275"); // RB
-    const char* enable_blur = ini.GetValue("General", "iEnableBlur", "1");
+    const char *keycodeStr = ini.GetValue("General", "iOpenMenuKeycode", "49");                   // N
+    const char *detailsStr = ini.GetValue("General", "iShowDetailsKeycode", "33");                // F
+    const char *actionStr = ini.GetValue("General", "iActionButtonKeycode", "34");                // G
+    const char *navLeftStr = ini.GetValue("General", "iNavLeft", "16");                           // Q
+    const char *navRightStr = ini.GetValue("General", "iNavRight", "19");                         // R
+    const char *detailsGamepadStr = ini.GetValue("General", "iShowDetailsGamepadKeycode", "273"); // RS
+    const char *actionGamepadStr = ini.GetValue("General", "iActionButtonGamepadKeycode", "279"); // Y
+    const char *navLeftGamepadStr = ini.GetValue("General", "iNavLeftGamepad", "274");            // LB
+    const char *navRightGamepadStr = ini.GetValue("General", "iNavRightGamepad", "275");          // RB
+    const char *enable_blur = ini.GetValue("General", "iEnableBlur", "1");
     lowercaseName = ini.GetBoolValue("General", "bLowerCaseName", "false");
 
     menuHotkey = std::stoi(keycodeStr);
@@ -272,26 +324,30 @@ void LoadDataFromINI() {
     logger::debug("Loaded blur enabled: {}", enable_blur);
 }
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////
- // All credit goes to derickso/myztikrice for the following functions (https://github.com/derickso/ShowPlayerInMenus)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// All credit goes to derickso/myztikrice for the following functions (https://github.com/derickso/ShowPlayerInMenus)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void RotateCamera(RE::Actor* target) {
+void RotateCamera(RE::Actor *target)
+{
     auto camera = RE::PlayerCamera::GetSingleton();
     auto ini = RE::INISettingCollection::GetSingleton();
     bool isBeastForm = false;
     bool isVampireLord = false;
     camera->cameraTarget = target;
 
-    auto thirdState = (RE::ThirdPersonState*)camera->cameraStates[RE::CameraState::kThirdPerson].get();
+    auto thirdState = (RE::ThirdPersonState *)camera->cameraStates[RE::CameraState::kThirdPerson].get();
 
     if (target->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("WerewolfBeastRace") ||
-        target->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("DLC2WerebearBeastRace")) {
+        target->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("DLC2WerebearBeastRace"))
+    {
         isBeastForm = true;
-    } else if (target->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("DLC1VampireBeastRace")) {
+    }
+    else if (target->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("DLC1VampireBeastRace"))
+    {
         isVampireLord = true;
     }
-    
+
     // collect original values for later
     targetActor = target;
     targetAngleX = target->data.angle.x;
@@ -302,7 +358,8 @@ void RotateCamera(RE::Actor* target) {
     g_freeRotation = freeRotation;
     timescale = RE::TESForm::LookupByID<RE::TESGlobal>(0x3A)->value;
     posOffsetExpected = thirdState->posOffsetExpected;
-    if (camera->IsInFirstPerson()) {
+    if (camera->IsInFirstPerson())
+    {
         forced3rdPerson = true;
     }
     camera->SetState(thirdState);
@@ -338,7 +395,8 @@ void RotateCamera(RE::Actor* target) {
     target->SetGraphVariableBool("IsNPC", false);
     target->SetGraphVariableBool("bHeadTrackSpine", false);
     target->SetGraphVariableBool("bUseEyeTracking", false);
-    if (auto* process = target->GetActorRuntimeData().currentProcess) {
+    if (auto *process = target->GetActorRuntimeData().currentProcess)
+    {
         process->ClearActionHeadtrackTarget(true);
     }
 
@@ -347,47 +405,62 @@ void RotateCamera(RE::Actor* target) {
     thirdState->toggleAnimCam = true;
     thirdState->freeRotationEnabled = true;
 
-    autoVanityModeDelay->data.f = 10800.0f;  // 3 hours
+    autoVanityModeDelay->data.f = 10800.0f; // 3 hours
     togglePOVDelay->data.f = 10800.0f;
 
-    if (g_isUltraWide) {
+    if (g_isUltraWide)
+    {
         fNewOverShoulderCombatPosX = -28.0f;
-    } else {
+    }
+    else
+    {
         fNewOverShoulderCombatPosX = -35.0f;
     }
 
-    if (isBeastForm) {
+    if (isBeastForm)
+    {
         fNewOverShoulderCombatPosX -= 27.0f;
-    } else if (target->AsActorState()->IsWeaponDrawn()) {
+    }
+    else if (target->AsActorState()->IsWeaponDrawn())
+    {
         fNewOverShoulderCombatPosX -= 5.0f;
     }
 
     fNewOverShoulderCombatAddY = 0.f;
     auto targetSitState = target->AsActorState()->GetSitSleepState();
-    if (target->IsOnMount()) {
+    if (target->IsOnMount())
+    {
         fNewOverShoulderCombatPosZ = 35.0f + (target->GetHeight() - 130);
         vanityModeMinDist->data.f = 190.0f;
         vanityModeMaxDist->data.f = 190.0f;
-    } else if (targetSitState >= RE::SIT_SLEEP_STATE::kWantToSit &&
-               targetSitState <= RE::SIT_SLEEP_STATE::kWantToStand) {
+    }
+    else if (targetSitState >= RE::SIT_SLEEP_STATE::kWantToSit &&
+             targetSitState <= RE::SIT_SLEEP_STATE::kWantToStand)
+    {
         fNewOverShoulderCombatPosZ = -53.0f + (target->GetHeight() - 130);
         vanityModeMinDist->data.f = 155.0f;
         vanityModeMaxDist->data.f = 155.0f;
-    } 
-    else if (isBeastForm) {
+    }
+    else if (isBeastForm)
+    {
         fNewOverShoulderCombatPosZ = -32.0f + (target->GetHeight() - 130);
         vanityModeMinDist->data.f = 200.0f;
         vanityModeMaxDist->data.f = 200.0f;
-    } else if (isVampireLord) {
+    }
+    else if (isVampireLord)
+    {
         fNewOverShoulderCombatPosZ = -37.0f + (target->GetHeight() - 128);
         vanityModeMinDist->data.f = 165.0f;
         vanityModeMaxDist->data.f = 165.0f;
-    } else if (target->AsActorState()->IsWeaponDrawn()) {
+    }
+    else if (target->AsActorState()->IsWeaponDrawn())
+    {
         fNewOverShoulderCombatPosZ = -32.0f + (target->GetHeight() - 128);
         vanityModeMinDist->data.f = 165.0f;
         vanityModeMaxDist->data.f = 165.0f;
     }
-    else {
+    else
+    {
         fNewOverShoulderCombatPosZ = -22.0f + (target->GetHeight() - 128);
         vanityModeMinDist->data.f = 155.0f;
         vanityModeMaxDist->data.f = 155.0f;
@@ -395,10 +468,12 @@ void RotateCamera(RE::Actor* target) {
 
     thirdState->freeRotation.x = MATH_PI - 0.5f;
 
-    if (target->IsOnMount()) {
+    if (target->IsOnMount())
+    {
         RE::NiPointer<RE::Actor> targetMount;
-        if (target->GetMount(targetMount)) {
-            auto* node = targetMount->Get3D();
+        if (target->GetMount(targetMount))
+        {
+            auto *node = targetMount->Get3D();
 
             RE::NiMatrix3 rot = node->world.rotate;
             RE::NiPoint3 forward = rot * RE::NiPoint3{0, 1, 0};
@@ -407,28 +482,34 @@ void RotateCamera(RE::Actor* target) {
             float slope = forward.z;
             thirdState->freeRotation.y = targetMount.get()->data.angle.x - 0.1f;
             logger::debug("forward.z: {}", forward.z);
-            
-            if (forward.z < 0) { //going downhill
+
+            if (forward.z < 0)
+            { // going downhill
                 fNewOverShoulderCombatPosX += 70.0f * forward.z;
                 fNewOverShoulderCombatPosZ += 60.0f * forward.z;
-            } else { //going uphill
+            }
+            else
+            { // going uphill
                 fNewOverShoulderCombatPosX += 40.0f * forward.z;
                 fNewOverShoulderCombatPosZ += 50.0f * forward.z;
             }
             vanityModeMinDist->data.f -= 110.0f * forward.z;
             vanityModeMaxDist->data.f -= 110.0f * forward.z;
         }
-    } else {
+    }
+    else
+    {
         thirdState->freeRotation.y = 0.0f;
     }
 
     // account for camera freeRotation settings getting pushed into player's pitch (x) values when weapon drawn
     if (!target->AsActorState()->IsWeaponDrawn())
         target->data.angle.x = 0.1f;
-    else {
+    else
+    {
         target->data.angle.x -= target->data.angle.x - 0.1f;
     }
-    
+
     overShoulderCombatPosX->data.f = fNewOverShoulderCombatPosX;
     overShoulderCombatAddY->data.f = fNewOverShoulderCombatAddY;
     overShoulderCombatPosZ->data.f = fNewOverShoulderCombatPosZ;
@@ -450,32 +531,38 @@ void RotateCamera(RE::Actor* target) {
 
     camera->Update();
 
-    //timescale to 0
+    // timescale to 0
     RE::TESForm::LookupByID<RE::TESGlobal>(0x3A)->value = 0.f;
 
-    //disables AI
+    // disables AI
     auto processLists = RE::ProcessLists::GetSingleton();
-    if (processLists) {
-        for (auto handle : processLists->highActorHandles) {
+    if (processLists)
+    {
+        for (auto handle : processLists->highActorHandles)
+        {
             auto actor = handle.get().get();
-            if (!actor || actor == target || IsTargetsMount(actor, target)) continue;
+            if (!actor || actor == target || IsTargetsMount(actor, target))
+                continue;
             FreezeNPC(actor);
         }
     }
 }
 
-void ResetCamera() {
+void ResetCamera()
+{
     auto camera = RE::PlayerCamera::GetSingleton();
-    auto thirdState = (RE::ThirdPersonState*)camera->cameraStates[RE::CameraState::kThirdPerson].get();
-    auto* player = RE::PlayerCharacter::GetSingleton();
+    auto thirdState = (RE::ThirdPersonState *)camera->cameraStates[RE::CameraState::kThirdPerson].get();
+    auto *player = RE::PlayerCharacter::GetSingleton();
 
-    if (forced3rdPerson) {
+    if (forced3rdPerson)
+    {
         // to cameraState = (RE::TESCameraState*)camera->cameraStates[m_camStateId].get();
         const auto firstPersonState =
-            static_cast<RE::FirstPersonState*>(camera->cameraStates[RE::CameraState::kFirstPerson].get());
+            static_cast<RE::FirstPersonState *>(camera->cameraStates[RE::CameraState::kFirstPerson].get());
         camera->SetState(firstPersonState);
     }
-    if (g_prevState) {
+    if (g_prevState)
+    {
         camera->SetState(g_prevState);
     }
 
@@ -509,15 +596,18 @@ void ResetCamera() {
 
     rotatedPlayer = false;
 
-    //setting timescale back to its former value
+    // setting timescale back to its former value
     RE::TESForm::LookupByID<RE::TESGlobal>(0x3A)->value = timescale;
 
-    //re-enables AI
+    // re-enables AI
     auto processLists = RE::ProcessLists::GetSingleton();
-    if (processLists) {
-        for (auto handle : processLists->highActorHandles) {
+    if (processLists)
+    {
+        for (auto handle : processLists->highActorHandles)
+        {
             auto actor = handle.get().get();
-            if (!actor || actor == targetActor || IsTargetsMount(actor, targetActor) || IsMannequin(actor)) continue;
+            if (!actor || actor == targetActor || IsTargetsMount(actor, targetActor) || IsMannequin(actor))
+                continue;
             UnfreezeNPC(actor);
         }
     }
@@ -526,13 +616,15 @@ void ResetCamera() {
     targetActor = player;
 }
 
-//credit goes to powerofthree for the freeze and unfreeze functions (https://github.com/powerof3/ClassicParalysis)
-void FreezeNPC(RE::Actor* a_actor) {
+// credit goes to powerofthree for the freeze and unfreeze functions (https://github.com/powerof3/ClassicParalysis)
+void FreezeNPC(RE::Actor *a_actor)
+{
 
-    if (const auto currentProcess = a_actor->GetActorRuntimeData().currentProcess) {
-        if (currentProcess->high->unk470 || currentProcess->high->approachingAutoTeleportDoor || currentProcess->high->fadeState == RE::HighProcessData::FADE_STATE::kTeleportOut) //unk470 = doorActivated
+    if (const auto currentProcess = a_actor->GetActorRuntimeData().currentProcess)
+    {
+        if (currentProcess->high->unk470 || currentProcess->high->approachingAutoTeleportDoor || currentProcess->high->fadeState == RE::HighProcessData::FADE_STATE::kTeleportOut) // unk470 = doorActivated
         {
-            //If going through load door we do not want to freeze
+            // If going through load door we do not want to freeze
             return;
         }
         currentProcess->ClearMuzzleFlashes();
@@ -541,7 +633,8 @@ void FreezeNPC(RE::Actor* a_actor) {
     a_actor->PauseCurrentDialogue();
     a_actor->GetActorRuntimeData().boolFlags.reset(RE::Actor::BOOL_FLAGS::kShouldAnimGraphUpdate);
 
-    if (const auto charController = a_actor->GetCharController(); charController) {
+    if (const auto charController = a_actor->GetCharController(); charController)
+    {
         charController->flags.set(RE::CHARACTER_FLAGS::kNotPushable);
 
         charController->flags.reset(RE::CHARACTER_FLAGS::kRecordHits);
@@ -551,34 +644,41 @@ void FreezeNPC(RE::Actor* a_actor) {
     a_actor->EnableAI(false);
 }
 
-void UnfreezeNPC(RE::Actor* a_actor) {
+void UnfreezeNPC(RE::Actor *a_actor)
+{
     a_actor->GetActorRuntimeData().boolFlags.set(RE::Actor::BOOL_FLAGS::kShouldAnimGraphUpdate);
 
-    if (const auto charController = a_actor->GetCharController()) {
+    if (const auto charController = a_actor->GetCharController())
+    {
         charController->flags.reset(RE::CHARACTER_FLAGS::kNotPushable);
     }
 
     a_actor->EnableAI(true);
 }
 
-const TESClass* GetBestMatchingClass(const std::vector<TESClass>& classes,
-                                     const std::unordered_map<std::string, float>& skillLevels) {
-    const TESClass* bestMatch = nullptr;
+const TESClass *GetBestMatchingClass(const std::vector<TESClass> &classes,
+                                     const std::unordered_map<std::string, float> &skillLevels)
+{
+    const TESClass *bestMatch = nullptr;
     float bestScore = -1.0f;
 
-    for (const auto& tesClass : classes) {
+    for (const auto &tesClass : classes)
+    {
         float score = 0.0f;
-        //logger::info("CLASS: {}", tesClass.name);
-        for (auto skill : tesClass.majorSkills) {
-            //logger::info("-------{}", skill);
+        // logger::info("CLASS: {}", tesClass.name);
+        for (auto skill : tesClass.majorSkills)
+        {
+            // logger::info("-------{}", skill);
             auto it = skillLevels.find(skill);
-            if (it != skillLevels.end()) {
-                //logger::info("-------lvl{}", it->second);
+            if (it != skillLevels.end())
+            {
+                // logger::info("-------lvl{}", it->second);
                 score += it->second;
             }
         }
 
-        if (score > bestScore) {
+        if (score > bestScore)
+        {
             bestScore = score;
             bestMatch = &tesClass;
         }
@@ -587,21 +687,22 @@ const TESClass* GetBestMatchingClass(const std::vector<TESClass>& classes,
     return bestMatch;
 }
 
-const TESClass* GetApprenticeClass(const std::map<int, TESClass>& classes)
+const TESClass *GetApprenticeClass(const std::map<int, TESClass> &classes)
 {
-    const TESClass* instance = &classes.begin()->second;
+    const TESClass *instance = &classes.begin()->second;
 
     const auto dataHandler = RE::TESDataHandler::GetSingleton();
-    auto* classTrackerForm = dataHandler->LookupForm(RE::FormID(0x0F5), "Apprentice.esp");
+    auto *classTrackerForm = dataHandler->LookupForm(RE::FormID(0x0F5), "Apprentice.esp");
 
     if (classTrackerForm)
     {
         auto classTracker = classTrackerForm->As<RE::TESGlobal>();
         int classIndex = static_cast<int>(classTracker->value);
 
-        for (const auto& [id, tesClass] : classes)
+        for (const auto &[id, tesClass] : classes)
         {
-            if (id == classIndex) {
+            if (id == classIndex)
+            {
                 instance = &tesClass;
             }
         }
@@ -610,21 +711,22 @@ const TESClass* GetApprenticeClass(const std::map<int, TESClass>& classes)
     return instance;
 }
 
-const TESClass* GetApprenticeTrait(const std::map<int, TESClass>& classes)
+const TESClass *GetApprenticeTrait(const std::map<int, TESClass> &classes)
 {
-    const TESClass* instance = &classes.begin()->second;
+    const TESClass *instance = &classes.begin()->second;
 
     const auto dataHandler = RE::TESDataHandler::GetSingleton();
-    auto* traitTrackerForm = dataHandler->LookupForm(RE::FormID(0x161), "Apprentice.esp");
+    auto *traitTrackerForm = dataHandler->LookupForm(RE::FormID(0x161), "Apprentice.esp");
 
     if (traitTrackerForm)
     {
         auto traitTracker = traitTrackerForm->As<RE::TESGlobal>();
         int classIndex = static_cast<int>(traitTracker->value);
 
-        for (const auto& [id, tesClass] : classes)
+        for (const auto &[id, tesClass] : classes)
         {
-            if (id == classIndex) {
+            if (id == classIndex)
+            {
                 instance = &tesClass;
             }
         }
@@ -633,43 +735,56 @@ const TESClass* GetApprenticeTrait(const std::map<int, TESClass>& classes)
     return instance;
 }
 
-static bool TryParseStage(const nlohmann::json& jStage, std::int32_t& outStage) {
-    try {
-        if (jStage.is_number_integer()) {
+static bool TryParseStage(const nlohmann::json &jStage, std::int32_t &outStage)
+{
+    try
+    {
+        if (jStage.is_number_integer())
+        {
             outStage = jStage.get<std::int32_t>();
             return true;
         }
-        if (jStage.is_string()) {
+        if (jStage.is_string())
+        {
             outStage = std::stoi(jStage.get<std::string>());
             return true;
         }
-    } catch (...) {
+    }
+    catch (...)
+    {
     }
     return false;
 }
 
-static bool LoadFactionFile(const fs::path& path, FactionDef& out) {
+static bool LoadFactionFile(const fs::path &path, FactionDef &out)
+{
     std::ifstream file(path);
-    if (!file.is_open()) {
+    if (!file.is_open())
+    {
         logger::warn("Failed to open faction JSON: {}", path.string());
         return false;
     }
 
     nlohmann::json j;
-    try {
+    try
+    {
         file >> j;
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception &e)
+    {
         logger::error("Error parsing faction JSON {}: {}", path.string(), e.what());
         return false;
     }
 
-    if (!j.is_object()) {
+    if (!j.is_object())
+    {
         logger::warn("Faction JSON not an object: {}", path.string());
         return false;
     }
 
     if (!j.contains("id") || !j["id"].is_string() || !j.contains("name") || !j["name"].is_string() ||
-        !j.contains("ranks") || !j["ranks"].is_array()) {
+        !j.contains("ranks") || !j["ranks"].is_array())
+    {
         logger::warn("Skipping invalid faction JSON {} (missing id/name/ranks)", path.string());
         return false;
     }
@@ -677,19 +792,23 @@ static bool LoadFactionFile(const fs::path& path, FactionDef& out) {
     out.id = j["id"].get<std::string>();
     out.name = j["name"].get<std::string>();
     out.gameFactionCheck.clear();
-    if (j.contains("gameFactionCheck") && j["gameFactionCheck"].is_string()) {
+    if (j.contains("gameFactionCheck") && j["gameFactionCheck"].is_string())
+    {
         out.gameFactionCheck = j["gameFactionCheck"].get<std::string>();
     }
     out.ranks.clear();
 
-    for (const auto& r : j["ranks"]) {
-        if (!r.is_object()) {
+    for (const auto &r : j["ranks"])
+    {
+        if (!r.is_object())
+        {
             logger::warn("Skipping invalid rank in {} (rank not an object)", path.filename().string());
             continue;
         }
 
         if (!r.contains("maleTitle") || !r["maleTitle"].is_string() || !r.contains("femaleTitle") ||
-            !r["femaleTitle"].is_string() || !r.contains("requirements") || !r["requirements"].is_array()) {
+            !r["femaleTitle"].is_string() || !r.contains("requirements") || !r["requirements"].is_array())
+        {
             logger::warn("Skipping invalid rank in {} (missing maleTitle/femaleTitle/requirements)",
                          path.filename().string());
             continue;
@@ -702,13 +821,16 @@ static bool LoadFactionFile(const fs::path& path, FactionDef& out) {
         rank.rankDisplayOnly = r.value("rankDisplayOnly", false);
         rank.requirements.clear();
 
-        for (const auto& jr : r["requirements"]) {
-            if (!jr.is_object()) {
+        for (const auto &jr : r["requirements"])
+        {
+            if (!jr.is_object())
+            {
                 logger::warn("Skipping invalid requirement in {} (not an object)", path.filename().string());
                 continue;
             }
 
-            if (!jr.contains("quest") || !jr["quest"].is_string() || !jr.contains("stage")) {
+            if (!jr.contains("quest") || !jr["quest"].is_string() || !jr.contains("stage"))
+            {
                 logger::warn("Skipping invalid requirement in {} (missing quest/stage)", path.filename().string());
                 continue;
             }
@@ -716,7 +838,8 @@ static bool LoadFactionFile(const fs::path& path, FactionDef& out) {
             QuestRequirement req;
             req.quest = jr["quest"].get<std::string>();
 
-            if (!TryParseStage(jr["stage"], req.stage)) {
+            if (!TryParseStage(jr["stage"], req.stage))
+            {
                 logger::warn("Skipping requirement with invalid stage in {} (quest={})", path.filename().string(),
                              req.quest);
                 continue;
@@ -725,7 +848,8 @@ static bool LoadFactionFile(const fs::path& path, FactionDef& out) {
             rank.requirements.emplace_back(std::move(req));
         }
 
-        if (rank.requirements.empty()) {
+        if (rank.requirements.empty())
+        {
             logger::warn("Skipping rank in {} (no valid requirements)", path.filename().string());
             continue;
         }
@@ -733,31 +857,40 @@ static bool LoadFactionFile(const fs::path& path, FactionDef& out) {
         out.ranks.emplace_back(std::move(rank));
     }
 
-
-    if (out.ranks.empty()) {
+    if (out.ranks.empty())
+    {
         logger::warn("Faction '{}' has no valid ranks: {}", out.id, path.string());
     }
 
     return true;
 }
 
-static bool AreRankRequirementsMet(const FactionRankDef& rank) {
-    if (rank.requirements.empty()) {
+static bool AreRankRequirementsMet(const FactionRankDef &rank)
+{
+    if (rank.requirements.empty())
+    {
         return false;
     }
 
-    if (rank.requireAll) {
+    if (rank.requireAll)
+    {
         // AND
-        for (const auto& req : rank.requirements) {
-            if (!IsQuestStageAtLeast(req.quest, req.stage)) {
+        for (const auto &req : rank.requirements)
+        {
+            if (!IsQuestStageAtLeast(req.quest, req.stage))
+            {
                 return false;
             }
         }
         return true;
-    } else {
+    }
+    else
+    {
         // OR
-        for (const auto& req : rank.requirements) {
-            if (IsQuestStageAtLeast(req.quest, req.stage)) {
+        for (const auto &req : rank.requirements)
+        {
+            if (IsQuestStageAtLeast(req.quest, req.stage))
+            {
                 return true;
             }
         }
@@ -765,28 +898,34 @@ static bool AreRankRequirementsMet(const FactionRankDef& rank) {
     }
 }
 
-
-void LoadFactionDefinitions() {
+void LoadFactionDefinitions()
+{
     g_factionDefs.clear();
 
-    try {
-        if (!fs::exists(FACTIONS_DIRECTORY) || !fs::is_directory(FACTIONS_DIRECTORY)) {
+    try
+    {
+        if (!fs::exists(FACTIONS_DIRECTORY) || !fs::is_directory(FACTIONS_DIRECTORY))
+        {
             logger::warn("Faction directory missing: {}", FACTIONS_DIRECTORY);
             return;
         }
 
         std::size_t loaded = 0;
-        for (const auto& entry : fs::directory_iterator(FACTIONS_DIRECTORY)) {
-            if (!entry.is_regular_file()) {
+        for (const auto &entry : fs::directory_iterator(FACTIONS_DIRECTORY))
+        {
+            if (!entry.is_regular_file())
+            {
                 continue;
             }
-            const auto& p = entry.path();
-            if (p.extension() != ".json") {
+            const auto &p = entry.path();
+            if (p.extension() != ".json")
+            {
                 continue;
             }
 
             FactionDef def;
-            if (LoadFactionFile(p, def)) {
+            if (LoadFactionFile(p, def))
+            {
                 logger::trace("Loaded faction '{}' ({} ranks) from {}", def.id, def.ranks.size(), p.filename().string());
                 g_factionDefs.emplace_back(std::move(def));
                 ++loaded;
@@ -794,20 +933,25 @@ void LoadFactionDefinitions() {
         }
 
         logger::info("Faction JSON scan complete: {} loaded", loaded);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception &e)
+    {
         logger::error("Error iterating faction directory {}: {}", FACTIONS_DIRECTORY, e.what());
     }
 }
 
-const std::vector<FactionDef>& GetFactionDefinitions() { return g_factionDefs; }
+const std::vector<FactionDef> &GetFactionDefinitions() { return g_factionDefs; }
 
-static bool IsQuestStageAtLeast(const std::string& questEdid, std::int32_t requiredStage) {
-    if (questEdid.empty()) {
+static bool IsQuestStageAtLeast(const std::string &questEdid, std::int32_t requiredStage)
+{
+    if (questEdid.empty())
+    {
         return false;
     }
 
-    auto* quest = RE::TESForm::LookupByEditorID<RE::TESQuest>(questEdid);
-    if (!quest) {
+    auto *quest = RE::TESForm::LookupByEditorID<RE::TESQuest>(questEdid);
+    if (!quest)
+    {
         logger::warn("FactionRanks: quest not found by EDID: {}", questEdid);
         return false;
     }
@@ -816,18 +960,22 @@ static bool IsQuestStageAtLeast(const std::string& questEdid, std::int32_t requi
     return curStage >= requiredStage;
 }
 
-bool TryGetBestRankForFaction(const FactionDef& def, RE::SEXES::SEX gender, std::string& outRankTitle,
-                              bool& outRankDisplayOnly) {
+bool TryGetBestRankForFaction(const FactionDef &def, RE::SEXES::SEX gender, std::string &outRankTitle,
+                              bool &outRankDisplayOnly)
+{
     outRankTitle.clear();
     outRankDisplayOnly = false;
 
-    if (!IsPlayerInFactionWithRank(def.gameFactionCheck)) {
+    if (!IsPlayerInFactionWithRank(def.gameFactionCheck))
+    {
         return false;
     }
 
     bool found = false;
-    for (const auto& r : def.ranks) {
-        if (AreRankRequirementsMet(r)) {
+    for (const auto &r : def.ranks)
+    {
+        if (AreRankRequirementsMet(r))
+        {
             outRankTitle = (gender == RE::SEXES::SEX::kFemale) ? r.femaleTitle : r.maleTitle;
             outRankDisplayOnly = r.rankDisplayOnly;
             found = true;
@@ -839,40 +987,49 @@ bool TryGetBestRankForFaction(const FactionDef& def, RE::SEXES::SEX gender, std:
 
 static inline bool IsWS(unsigned char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
 
-static std::string TrimRightCopy(std::string s) {
-    while (!s.empty() && IsWS(static_cast<unsigned char>(s.back()))) {
+static std::string TrimRightCopy(std::string s)
+{
+    while (!s.empty() && IsWS(static_cast<unsigned char>(s.back())))
+    {
         s.pop_back();
     }
     return s;
 }
 
-std::string RemoveLastDotSentence(std::string text) {
+std::string RemoveLastDotSentence(std::string text)
+{
     text = TrimRightCopy(std::move(text));
-    if (text.empty()) {
+    if (text.empty())
+    {
         return text;
     }
 
     std::vector<size_t> sentenceEnds;
     sentenceEnds.reserve(8);
 
-    for (size_t i = 0; i < text.size(); ++i) {
-        if (text[i] != '.') {
+    for (size_t i = 0; i < text.size(); ++i)
+    {
+        if (text[i] != '.')
+        {
             continue;
         }
 
         const bool atEnd = (i + 1 >= text.size());
         const bool nextIsWS = (!atEnd && IsWS(static_cast<unsigned char>(text[i + 1])));
 
-        if (atEnd || nextIsWS) {
+        if (atEnd || nextIsWS)
+        {
             size_t j = i + 1;
-            while (j < text.size() && IsWS(static_cast<unsigned char>(text[j]))) {
+            while (j < text.size() && IsWS(static_cast<unsigned char>(text[j])))
+            {
                 ++j;
             }
             sentenceEnds.push_back(j);
         }
     }
 
-    if (sentenceEnds.size() < 2) {
+    if (sentenceEnds.size() < 2)
+    {
         return text;
     }
 
@@ -880,18 +1037,24 @@ std::string RemoveLastDotSentence(std::string text) {
     return TrimRightCopy(std::move(text));
 }
 
-std::string CollapsePercent(std::string s) {
+std::string CollapsePercent(std::string s)
+{
     std::string out;
     out.reserve(s.size());
 
     bool lastWasPercent = false;
-    for (char c : s) {
-        if (c == '%') {
-            if (!lastWasPercent) {
+    for (char c : s)
+    {
+        if (c == '%')
+        {
+            if (!lastWasPercent)
+            {
                 out.push_back('%');
                 lastWasPercent = true;
             }
-        } else {
+        }
+        else
+        {
             out.push_back(c);
             lastWasPercent = false;
         }
@@ -899,20 +1062,24 @@ std::string CollapsePercent(std::string s) {
     return out;
 }
 
-static bool IsPlayerInFactionWithRank(const std::string& factionEdid) {
-    if (factionEdid.empty()) {
+static bool IsPlayerInFactionWithRank(const std::string &factionEdid)
+{
+    if (factionEdid.empty())
+    {
         return true;
     }
 
-    auto* player = RE::PlayerCharacter::GetSingleton();
-    auto* base = player ? player->GetActorBase() : nullptr;
-    if (!base) {
+    auto *player = RE::PlayerCharacter::GetSingleton();
+    auto *base = player ? player->GetActorBase() : nullptr;
+    if (!base)
+    {
         return false;
     }
 
     bool found = false;
 
-    player->VisitFactions([&](const RE::TESFaction* fac, int8_t rank) {
+    player->VisitFactions([&](const RE::TESFaction *fac, int8_t rank)
+                          {
         if (!fac) return false;
 
         if (rank > -1) {
@@ -922,10 +1089,45 @@ static bool IsPlayerInFactionWithRank(const std::string& factionEdid) {
                 return true;  // stop iteration
             }
         }
-        return false;
-    });
+        return false; });
 
     return found;
+}
+
+const TESClass *GetParadigmClass(std::map<int, TESClass> &classes, RE::Actor *actor)
+{
+    for (auto &[id, paradigmClass] : classes)
+    {
+        if (id == 0)
+            continue;
+
+        std::string perkName = paradigmClass.name;
+
+        if (!perkName.empty() && perkName[0] == '$')
+        {
+            perkName.erase(0, 1);
+        }
+
+        logger::info("Checking Paradigm perk: {}", perkName);
+
+        auto perk = RE::TESForm::LookupByEditorID<RE::BGSPerk>(perkName);
+
+        if (!perk)
+        {
+            logger::info("Perk not found: {}", perkName);
+            continue;
+        }
+
+        if (actor->HasPerk(perk))
+        {
+            logger::info("Paradigm class detected: {}", paradigmClass.name);
+            return &paradigmClass;
+        }
+    }
+
+    static TESClass defaultClass{"-", {}, "", ""};
+    logger::info("No Paradigm class detected.");
+    return &defaultClass;
 }
 
 /*

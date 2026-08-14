@@ -3,7 +3,61 @@
 #include "Utility.h"
 #include "editorID.hpp"
 #include "CustomSkills.h"
-#include "../integration/ChocolatePoiseIntegration.h"
+#include "PoiseAPI.h"
+#include "ArmorResistance.h"
+#include "CriticalCalcs.h"
+namespace
+{
+    HMODULE g_poiseModule = nullptr;
+
+    Poise_GetArmorReducedStagger_t g_Poise_GetArmorReducedStagger = nullptr;
+    Poise_GetEffectiveMagicResistance_t g_Poise_GetEffectiveMagicResistance = nullptr;
+    Poise_GetHandDamage_t g_Poise_GetHandDamage = nullptr;
+}
+
+bool InitializePoiseAPI()
+{
+    g_poiseModule = GetModuleHandleW(L"ChocolatePoise.dll");
+
+    if (!g_poiseModule)
+    {
+        logger::error("ChocolatePoise.dll is not loaded.");
+        return false;
+    }
+
+    g_Poise_GetArmorReducedStagger =
+        reinterpret_cast<Poise_GetArmorReducedStagger_t>(
+            GetProcAddress(g_poiseModule, "Poise_GetArmorReducedStagger"));
+
+    g_Poise_GetEffectiveMagicResistance =
+        reinterpret_cast<Poise_GetEffectiveMagicResistance_t>(
+            GetProcAddress(g_poiseModule, "Poise_GetEffectiveMagicResistance"));
+
+    g_Poise_GetHandDamage =
+        reinterpret_cast<Poise_GetHandDamage_t>(
+            GetProcAddress(g_poiseModule, "Poise_GetHandDamage"));
+
+    if (!g_Poise_GetArmorReducedStagger)
+    {
+        logger::error("Failed to resolve Poise_GetArmorReducedStagger.");
+        return false;
+    }
+
+    if (!g_Poise_GetEffectiveMagicResistance)
+    {
+        logger::error("Failed to resolve Poise_GetEffectiveMagicResistance.");
+        return false;
+    }
+
+    if (!g_Poise_GetHandDamage)
+    {
+        logger::error("Failed to resolve Poise_GetHandDamage.");
+        return false;
+    }
+
+    logger::info("ChocolatePoise API resolved successfully.");
+    return true;
+}
 
 struct StandingStoneInfo
 {
@@ -376,70 +430,204 @@ namespace Scaleform
         menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetAttributesMeters", nullptr, attributesData.data(),
                               attributesData.size());
 
-        // STATS
-        std::array<RE::GFxValue, 13> statsData;
         float healRate = (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealRate) / 100) * maxHealth;
-        float magickaRate =
-            (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagickaRate) / 100) * maxMagicka;
-        float staminaRate =
-            (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStaminaRate) / 100) * maxStamina;
+        float magickaRate = (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagickaRate) / 100) * maxMagicka;
+        float staminaRate = (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStaminaRate) / 100) * maxStamina;
         float speedMult = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kSpeedMult);
         // UESP regarding WeaponSpeedMutl AV: "This is an odd modifier because the default is 0 and
         // yet it is a multiplier, meaning 1 = 100%, 0.5 = 50%, 2 = 200% but 0 = also 100%"
         float weaponSpeedMultRaw = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kWeaponSpeedMult);
-        float weaponSpeedMult = weaponSpeedMultRaw == 0 ? 100 : weaponSpeedMultRaw * 100;
+        //  float weaponSpeedMult = weaponSpeedMultRaw == 0 ? 100 : weaponSpeedMultRaw * 100;
+        float weaponSpeedMult =
+            weaponSpeedMultRaw == 0.0f
+                ? 100.0f
+                : weaponSpeedMultRaw * 100.0f;
+        // API TESTING - Armor Reduction
+        float poiseArmorResist = 0.0f;
 
-        float critChance = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kCriticalChance);
+        if (g_Poise_GetArmorReducedStagger)
+        {
+            const uint32_t formID = target->formID;
+            constexpr float baseStagger = 100.0f;
+
+            poiseArmorResist =
+                g_Poise_GetArmorReducedStagger(formID, baseStagger);
+
+            logger::info(
+                "Poise_GetArmorReducedStagger: formID={:08X}, inputStagger={}, reduction={}%",
+                formID,
+                baseStagger,
+                poiseArmorResist);
+        }
+        else
+        {
+            logger::error("Poise_GetArmorReducedStagger function pointer is null.");
+        }
+        // API TESTING - RIGHT HAND DAMAGE
+        float rightHandPoiseDamage = 0.0f;
+
+        if (g_Poise_GetHandDamage)
+        {
+            const uint32_t formID = target->formID;
+            constexpr bool leftHand = false;
+
+            rightHandPoiseDamage =
+                g_Poise_GetHandDamage(formID, leftHand);
+
+            logger::info(
+                "Poise_GetHandDamage: formID={:08X}, leftHand=false, outputDamage={}",
+                formID,
+                rightHandPoiseDamage);
+        }
+        else
+        {
+            logger::error(
+                "Poise_GetHandDamage function pointer is null.");
+        }
+
+        // API TESTING - LEFT HAND DAMAGE
+        float leftHandPoiseDamage = 0.0f;
+
+        if (g_Poise_GetHandDamage)
+        {
+            const uint32_t formID = target->formID;
+            constexpr bool leftHand = true;
+
+            leftHandPoiseDamage =
+                g_Poise_GetHandDamage(formID, leftHand);
+
+            logger::info(
+                "Poise_GetHandDamage: formID={:08X}, leftHand=true, outputDamage={}",
+                formID,
+                leftHandPoiseDamage);
+        }
+        else
+        {
+            logger::error(
+                "Poise_GetHandDamage function pointer is null.");
+        }
+
+        // API TESTING - EFFECTIVE MAGIC RESISTANCE
+        float poiseMagicResist = 0.0f;
+
+        if (g_Poise_GetEffectiveMagicResistance)
+        {
+            poiseMagicResist =
+                g_Poise_GetEffectiveMagicResistance(target);
+
+            logger::info(
+                "Poise_GetEffectiveMagicResistance: formID={:08X}, outputResistance={}",
+                target->formID,
+                poiseMagicResist);
+        }
+        else
+        {
+            logger::error(
+                "Poise_GetEffectiveMagicResistance function pointer is null.");
+        }
+
+        // ARMOR DAMAGE MITIGATION
+        float armorDamageMitigation = 0.0f;
+
+        armorDamageMitigation = ArmorResistance::Get(target);
+
+        logger::trace(
+            "Armor Damage Mitigation: formID={:08X}, mitigation={}%",
+            target->formID,
+            armorDamageMitigation * 100.0f);
+
+        float critChance = CriticalCalcs::GetCriticalChance(target);
+        float critDamage = CriticalCalcs::GetCriticalDamage(target);
         float poisonResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kPoisonResist);
-        float magicResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistMagic);
+
+        float magicResist =
+            target->AsActorValueOwner()->GetActorValue(
+                RE::ActorValue::kResistMagic);
+
+        if (ArmorResistance::IsBladeAndBluntInstalled())
+        {
+            const float armorRating =
+                target->AsActorValueOwner()->GetActorValue(
+                    RE::ActorValue::kDamageResist);
+
+            const float bladeAndBluntSpellResistance =
+                ArmorResistance::GetBladeAndBluntSpellResistance(armorRating);
+
+            magicResist +=
+                bladeAndBluntSpellResistance * 100.0f;
+        }
+
         float fireResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistFire);
         float frostResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistFrost);
         float shockResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistShock);
         float diseaseResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistDisease);
-        float poiseDefense = PoiseIntegration::GetArmorPoiseDefense(target);
 
         logger::trace(
-            "Heal rate: {}\n"
-            "Magicka rate: {}\n"
-            "Stamina rate: {}\n"
-            "Speed mult: {}\n"
-            "Weapon speed mult: {}\n"
-            "Critical hit chance: {}\n"
-            "Poison resist: {}\n"
-            "Magic resist: {}\n"
-            "Fire resist: {}\n"
-            "Frost resist: {}\n"
-            "Shock resist: {}\n"
-            "Disease resist: {}\n"
-            "Poise defense: {}",
+            "Stats:\n"
+            "---Heal rate: {}\n"
+            "---Magicka rate: {}\n"
+            "---Stamina rate: {}\n"
+            "---Speed mult: {}\n"
+            "---Weapon speed mult: {}\n"
+            "---Poison resist: {}\n"
+            "---Magic resist: {}\n"
+            "---Fire resist: {}\n"
+            "---Frost resist: {}\n"
+            "---Shock resist: {}\n"
+            "---Disease resist: {}\n"
+            "---Right hand poise damage: {}\n"
+            "---Left hand poise damage: {}\n"
+            "---Poise armor resist: {}\n"
+            "---Poise magic resist: {}\n"
+            "---Armor damage mitigation: {}%\n"
+            "---Critical hit chance: {}%\n"
+            "---Critical damage: {}%",
             healRate,
             magickaRate,
             staminaRate,
             speedMult,
             weaponSpeedMult,
-            critChance,
             poisonResist,
             magicResist,
             fireResist,
             frostResist,
             shockResist,
             diseaseResist,
-            poiseDefense);
+            rightHandPoiseDamage,
+            leftHandPoiseDamage,
+            poiseArmorResist,
+            poiseMagicResist,
+            armorDamageMitigation * 100.0f,
+            critChance,
+            critDamage * 100.0f);
+
+        // STATS
+        std::array<RE::GFxValue, 18> statsData;
 
         statsData[0] = healRate;
         statsData[1] = magickaRate;
         statsData[2] = staminaRate;
         statsData[3] = speedMult;
         statsData[4] = weaponSpeedMult;
-        statsData[5] = critChance;
-        statsData[6] = poisonResist;
-        statsData[7] = magicResist;
-        statsData[8] = fireResist;
-        statsData[9] = frostResist;
-        statsData[10] = shockResist;
-        statsData[11] = diseaseResist;
-        statsData[12] = poiseDefense;
-        menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetStats", nullptr, statsData.data(), statsData.size());
+        statsData[5] = poisonResist;
+        statsData[6] = magicResist;
+        statsData[7] = fireResist;
+        statsData[8] = frostResist;
+        statsData[9] = shockResist;
+        statsData[10] = diseaseResist;
+        statsData[11] = rightHandPoiseDamage;
+        statsData[12] = leftHandPoiseDamage;
+        statsData[13] = poiseArmorResist;
+        statsData[14] = poiseMagicResist;
+        statsData[15] = armorDamageMitigation * 100.0f;
+        statsData[16] = critChance;
+        statsData[17] = critDamage * 100.0f;
+
+        menu->uiMovie->Invoke(
+            "_root.CharacterSheet_mc.SetStats",
+            nullptr,
+            statsData.data(),
+            statsData.size());
     }
 
     void CharacterSheet::SetFactions(RE::Actor *target, RE::GPtr<RE::IMenu> menu)

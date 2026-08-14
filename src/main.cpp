@@ -8,48 +8,59 @@
 #include "SmoothCamAPI.h"
 #include "APIManager.h"
 #include "Serialization.h"
+#include "PoiseAPI.h"
+#include "ArmorResistance.h"
+#include "CriticalCalcs.h"
 
-
-void SKSEMessageHandler(SKSE::MessagingInterface::Message* message) {
+void SKSEMessageHandler(SKSE::MessagingInterface::Message *message)
+{
     auto eventProcessor = EventProcessor::GetSingleton();
-    switch (message->type) {
-        case (SKSE::MessagingInterface::kDataLoaded):
-            APIs::RequestAPIs();
-            RE::UI::GetSingleton()->AddEventSink<RE::MenuOpenCloseEvent>(eventProcessor);
-            Scaleform::CharacterSheet::Register();
-            break;
-        case (SKSE::MessagingInterface::kInputLoaded):
-            RE::BSInputDeviceManager::GetSingleton()->AddEventSink<RE::InputEvent*>(eventProcessor);
-            SKSE::GetModCallbackEventSource()->AddEventSink(eventProcessor);
-            break;
-        case SKSE::MessagingInterface::kPostLoadGame:
-        case SKSE::MessagingInterface::kPostPostLoad:
-            APIs::RequestAPIs();
-            break;
-        case SKSE::MessagingInterface::kPostLoad:
-            APIs::RequestAPIs();
-            break;
-        case SKSE::MessagingInterface::kNewGame:
-            APIs::RequestAPIs();
-            break;
-        case SKSE::MessagingInterface::kSaveGame:
-        default: 
-            break;
+    switch (message->type)
+    {
+    case (SKSE::MessagingInterface::kDataLoaded):
+        InitializePoiseAPI();
+        APIs::RequestAPIs();
+
+        ArmorResistance::Initialize();
+        CriticalCalcs::Initialize();
+
+        RE::UI::GetSingleton()->AddEventSink<RE::MenuOpenCloseEvent>(eventProcessor);
+        Scaleform::CharacterSheet::Register();
+        break;
+    case (SKSE::MessagingInterface::kInputLoaded):
+        RE::BSInputDeviceManager::GetSingleton()->AddEventSink<RE::InputEvent *>(eventProcessor);
+        SKSE::GetModCallbackEventSource()->AddEventSink(eventProcessor);
+        break;
+    case SKSE::MessagingInterface::kPostLoadGame:
+    case SKSE::MessagingInterface::kPostPostLoad:
+        APIs::RequestAPIs();
+        break;
+    case SKSE::MessagingInterface::kPostLoad:
+        APIs::RequestAPIs();
+        break;
+    case SKSE::MessagingInterface::kNewGame:
+        APIs::RequestAPIs();
+        break;
+    case SKSE::MessagingInterface::kSaveGame:
+    default:
+        break;
     }
 }
 
-extern "C" [[maybe_unused]] __declspec(dllexport) bool SKSEPlugin_Load(const SKSE::LoadInterface* skse) {
+extern "C" [[maybe_unused]] __declspec(dllexport) bool SKSEPlugin_Load(const SKSE::LoadInterface *skse)
+{
     SKSE::Init(skse);
 
     SetupLog();
     spdlog::set_level(spdlog::level::info);
 
-    auto* ser = SKSE::GetSerializationInterface();
+    ArmorResistance::Initialize();
+
+    auto *ser = SKSE::GetSerializationInterface();
     ser->SetUniqueID('CTTL');
     ser->SetRevertCallback(RevertCallback);
     ser->SetSaveCallback(SaveCallback);
     ser->SetLoadCallback(LoadCallback);
-
 
     SKSE::GetMessagingInterface()->RegisterListener(SKSEMessageHandler);
     pluginHandle = skse->GetPluginHandle();

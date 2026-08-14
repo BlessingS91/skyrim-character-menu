@@ -4,6 +4,7 @@
     "commonlibsse-ng",
     "simpleini",
     "nlohmann-json",
-    "xbyak"
+    "xbyak",
+    "tomlplusplus"
   ]
 }

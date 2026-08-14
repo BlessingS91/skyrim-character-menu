@@ -47,7 +47,9 @@ add_commonlibsse_plugin(${PROJECT_NAME} SOURCES
     src/Classes.cpp
     src/Serialization.cpp
     API/APIManager.cpp
-    integration/ChocolatePoiseIntegration.cpp
+    src/ArmorResistance.cpp
+    src/CriticalCalcs.cpp
+    src/GetDamage.cpp
 ) # <--- specifies plugin.cpp
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23) # <--- use C++23 standard
 target_precompile_headers(${PROJECT_NAME} PRIVATE src/PCH.h) # <--- PCH.h is required!
@@ -56,6 +58,12 @@ target_include_directories(CharacterSheet
         src
         API
         include
+)
+target_compile_options(CharacterSheet PRIVATE
+    /wd4244
+    /wd4100
+    /wd4189
+    /wd4267
 )
 
 # When your SKSE .dll is compiled, this will automatically copy the .dll into your mods folder.

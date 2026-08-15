@@ -6,58 +6,7 @@
 #include "PoiseAPI.h"
 #include "ArmorResistance.h"
 #include "CriticalCalcs.h"
-namespace
-{
-    HMODULE g_poiseModule = nullptr;
-
-    Poise_GetArmorReducedStagger_t g_Poise_GetArmorReducedStagger = nullptr;
-    Poise_GetEffectiveMagicResistance_t g_Poise_GetEffectiveMagicResistance = nullptr;
-    Poise_GetHandDamage_t g_Poise_GetHandDamage = nullptr;
-}
-
-bool InitializePoiseAPI()
-{
-    g_poiseModule = GetModuleHandleW(L"ChocolatePoise.dll");
-
-    if (!g_poiseModule)
-    {
-        logger::error("ChocolatePoise.dll is not loaded.");
-        return false;
-    }
-
-    g_Poise_GetArmorReducedStagger =
-        reinterpret_cast<Poise_GetArmorReducedStagger_t>(
-            GetProcAddress(g_poiseModule, "Poise_GetArmorReducedStagger"));
-
-    g_Poise_GetEffectiveMagicResistance =
-        reinterpret_cast<Poise_GetEffectiveMagicResistance_t>(
-            GetProcAddress(g_poiseModule, "Poise_GetEffectiveMagicResistance"));
-
-    g_Poise_GetHandDamage =
-        reinterpret_cast<Poise_GetHandDamage_t>(
-            GetProcAddress(g_poiseModule, "Poise_GetHandDamage"));
-
-    if (!g_Poise_GetArmorReducedStagger)
-    {
-        logger::error("Failed to resolve Poise_GetArmorReducedStagger.");
-        return false;
-    }
-
-    if (!g_Poise_GetEffectiveMagicResistance)
-    {
-        logger::error("Failed to resolve Poise_GetEffectiveMagicResistance.");
-        return false;
-    }
-
-    if (!g_Poise_GetHandDamage)
-    {
-        logger::error("Failed to resolve Poise_GetHandDamage.");
-        return false;
-    }
-
-    logger::info("ChocolatePoise API resolved successfully.");
-    return true;
-}
+#include "GetDamage.h"
 
 struct StandingStoneInfo
 {
@@ -485,7 +434,7 @@ namespace Scaleform
                 "Poise_GetHandDamage function pointer is null.");
         }
 
-        // API TESTING - LEFT HAND DAMAGE
+        // API TESTING - LEFT HAND Poise DAMAGE
         float leftHandPoiseDamage = 0.0f;
 
         if (g_Poise_GetHandDamage)
@@ -562,26 +511,47 @@ namespace Scaleform
         float shockResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistShock);
         float diseaseResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistDisease);
 
-        logger::trace(
-            "Stats:\n"
-            "---Heal rate: {}\n"
-            "---Magicka rate: {}\n"
-            "---Stamina rate: {}\n"
-            "---Speed mult: {}\n"
-            "---Weapon speed mult: {}\n"
-            "---Poison resist: {}\n"
-            "---Magic resist: {}\n"
-            "---Fire resist: {}\n"
-            "---Frost resist: {}\n"
-            "---Shock resist: {}\n"
-            "---Disease resist: {}\n"
-            "---Right hand poise damage: {}\n"
-            "---Left hand poise damage: {}\n"
-            "---Poise armor resist: {}\n"
-            "---Poise magic resist: {}\n"
-            "---Armor damage mitigation: {}%\n"
-            "---Critical hit chance: {}%\n"
-            "---Critical damage: {}%",
+        // WEAPON DAMAGE
+        float rightHandDamage = 0.0f;
+        float leftHandDamage = 0.0f;
+
+        if (target->IsPlayerRef())
+        {
+            auto *player = RE::PlayerCharacter::GetSingleton();
+
+            logger::info(
+                "DAMAGE TEST | IsPlayerRef=true | singleton={}",
+                static_cast<void *>(player));
+
+            if (player)
+            {
+                rightHandDamage = GetDamage::GetHandDamage(player, false);
+                leftHandDamage = GetDamage::GetHandDamage(player, true);
+
+                logger::info(
+                    "DAMAGE TEST | GetHandDamage returned | right={} | left={}",
+                    rightHandDamage,
+                    leftHandDamage);
+            }
+            else
+            {
+                logger::error("DAMAGE TEST | PlayerCharacter::GetSingleton() returned NULL");
+            }
+        }
+        else
+        {
+            logger::error(
+                "DAMAGE TEST | target is NOT player | formID={:08X}",
+                target->formID);
+        }
+
+        logger::info(
+            "SetStats values: "
+            "Heal={} Magicka={} Stamina={} Speed={} WeaponSpeed={} "
+            "Poison={} Magic={} Fire={} Frost={} Shock={} Disease={} "
+            "RightPoise={} LeftPoise={} PoiseArmor={} PoiseMagic={} "
+            "ArmorMitigation={} CritChance={} CritDamage={} "
+            "RightDamage={} LeftDamage={}",
             healRate,
             magickaRate,
             staminaRate,
@@ -599,10 +569,12 @@ namespace Scaleform
             poiseMagicResist,
             armorDamageMitigation * 100.0f,
             critChance,
-            critDamage * 100.0f);
+            critDamage * 100.0f,
+            rightHandDamage,
+            leftHandDamage);
 
         // STATS
-        std::array<RE::GFxValue, 18> statsData;
+        std::array<RE::GFxValue, 20> statsData;
 
         statsData[0] = healRate;
         statsData[1] = magickaRate;
@@ -622,6 +594,9 @@ namespace Scaleform
         statsData[15] = armorDamageMitigation * 100.0f;
         statsData[16] = critChance;
         statsData[17] = critDamage * 100.0f;
+
+        statsData[18] = rightHandDamage;
+        statsData[19] = leftHandDamage;
 
         menu->uiMovie->Invoke(
             "_root.CharacterSheet_mc.SetStats",

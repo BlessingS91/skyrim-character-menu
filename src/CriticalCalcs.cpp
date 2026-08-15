@@ -1,5 +1,3 @@
-#include "PerkEntryPointExtenderAPI.h"
-
 #include <array>
 #include <span>
 
@@ -12,12 +10,12 @@
 #include <filesystem>
 
 #include <Utility.h>
+#include "APIManager.h"
 
 namespace CriticalCalcs
 {
     namespace
     {
-        PerkEntryPointExtenderAPI::InterfaceVersion2 *g_pepe = nullptr;
         HMODULE g_criticalDamageFixModule = nullptr;
         bool g_initialized = false;
 
@@ -180,16 +178,6 @@ namespace CriticalCalcs
 
         g_initialized = true;
 
-        g_pepe =
-            PerkEntryPointExtenderAPI::RequestInterface<
-                PerkEntryPointExtenderAPI::InterfaceVersion2>();
-
-        if (!g_pepe)
-        {
-            logger::warn(
-                "CriticalCalcs: PEPE V2 interface unavailable.");
-        }
-
         g_criticalDamageFixModule =
             GetModuleHandleW(
                 L"ComprehensiveCriticalDamageFix.dll");
@@ -200,7 +188,6 @@ namespace CriticalCalcs
                 ReadCriticalDamageMultiplier();
         }
     }
-
     float GetCriticalChance(RE::Actor *actor)
     {
         if (!actor)
@@ -231,7 +218,7 @@ namespace CriticalCalcs
             }
         }
 
-        if (!g_pepe)
+        if (!APIs::PEPE)
         {
             return actorValueCritChance;
         }
@@ -243,7 +230,7 @@ namespace CriticalCalcs
             nullptr};
 
         const auto result =
-            g_pepe->ApplyPerkEntryPoint_Deprecated(
+            APIs::PEPE->ApplyPerkEntryPoint_Deprecated(
                 actor,
                 RE::PerkEntryPoint::kCalculateMyCriticalHitChance,
                 std::span<RE::TESForm *>(args),
@@ -292,14 +279,14 @@ namespace CriticalCalcs
 
         float perkCritDamage = 0.0f;
 
-        if (g_pepe)
+        if (APIs::PEPE)
         {
             std::array<RE::TESForm *, 2> args{
                 weapon,
                 nullptr};
 
             const auto result =
-                g_pepe->ApplyPerkEntryPoint_Deprecated(
+                APIs::PEPE->ApplyPerkEntryPoint_Deprecated(
                     actor,
                     RE::PerkEntryPoint::kCalculateMyCriticalHitDamage,
                     std::span<RE::TESForm *>(args),

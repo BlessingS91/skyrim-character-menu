@@ -18,7 +18,6 @@ void SKSEMessageHandler(SKSE::MessagingInterface::Message *message)
     switch (message->type)
     {
     case (SKSE::MessagingInterface::kDataLoaded):
-        InitializePoiseAPI();
         APIs::RequestAPIs();
 
         ArmorResistance::Initialize();
@@ -53,9 +52,6 @@ extern "C" [[maybe_unused]] __declspec(dllexport) bool SKSEPlugin_Load(const SKS
 
     SetupLog();
     spdlog::set_level(spdlog::level::info);
-
-    ArmorResistance::Initialize();
-
     auto *ser = SKSE::GetSerializationInterface();
     ser->SetUniqueID('CTTL');
     ser->SetRevertCallback(RevertCallback);

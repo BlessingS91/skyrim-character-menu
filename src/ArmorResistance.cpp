@@ -1,10 +1,9 @@
 #include "ArmorResistance.h"
-
-#include <Windows.h>
-#include <toml++/toml.hpp>
+#include "APIManager.h"
 
 #include <filesystem>
-#include <spdlog/spdlog.h>
+
+#include <toml++/toml.hpp>
 
 namespace ARRConfig
 {
@@ -68,8 +67,6 @@ namespace ArmorResistance
     {
         float g_armorBaseFactor = 0.03f;
         float g_armorScalingFactor = 0.12f;
-        bool g_armorRatingRescaled = false;
-        bool g_bladeAndBlunt = false;
 
         float GetGMSTFloat(const char *name, float fallback)
         {
@@ -259,18 +256,12 @@ namespace ArmorResistance
         g_armorScalingFactor =
             GetGMSTFloat("fArmorScalingFactor", 0.12f);
 
-        g_armorRatingRescaled =
-            GetModuleHandleW(L"ArmorRatingRescaledRemake.dll") != nullptr;
-
-        g_bladeAndBlunt =
-            GetModuleHandleW(L"BladeAndBlunt.dll") != nullptr;
-
         SKSE::log::info(
             "ArmorResistance: Skyrim GMSTs | fArmorBaseFactor={} | fArmorScalingFactor={}",
             g_armorBaseFactor,
             g_armorScalingFactor);
 
-        if (g_armorRatingRescaled)
+        if (APIs::ArmorRatingRescaled)
         {
             ARRConfig::Load();
 
@@ -283,7 +274,7 @@ namespace ArmorResistance
                 ARRConfig::disableHidden,
                 ARRConfig::overrideArmorCap);
         }
-        else if (g_bladeAndBlunt)
+        else if (APIs::BladeAndBlunt)
         {
             SKSE::log::info(
                 "ArmorResistance: Using Blade and Blunt.");
@@ -297,12 +288,12 @@ namespace ArmorResistance
 
     bool IsArmorRatingRescaledInstalled()
     {
-        return g_armorRatingRescaled;
+        return APIs::ArmorRatingRescaled;
     }
 
     bool IsBladeAndBluntInstalled()
     {
-        return g_bladeAndBlunt;
+        return APIs::BladeAndBlunt;
     }
 
     float Get(RE::Actor *actor)
@@ -312,12 +303,12 @@ namespace ArmorResistance
             return 0.0f;
         }
 
-        if (g_armorRatingRescaled)
+        if (APIs::ArmorRatingRescaled)
         {
             return CalculateArmorRatingRescaled(actor);
         }
 
-        if (g_bladeAndBlunt)
+        if (APIs::BladeAndBlunt)
         {
             return CalculateBladeAndBlunt(actor);
         }

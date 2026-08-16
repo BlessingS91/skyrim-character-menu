@@ -79,7 +79,7 @@ void APIs::RequestAPIs()
         }
     }
 
-    // Perk Entry Point Extender
+    // PEPE
     if (!PEPE)
     {
         PEPE =
@@ -90,30 +90,37 @@ void APIs::RequestAPIs()
         {
             logger::info("Obtained PerkEntryPointExtender API V2");
         }
-        else
-        {
-            logger::info("PerkEntryPointExtender API V2 unavailable.");
-        }
     }
 
-    // Optional mods
-    ArmorRatingRescaled =
-        GetModuleHandleW(L"ArmorRatingRescaledRemake.dll") != nullptr;
+    // One-time initialization
+    static bool initialized = false;
 
-    BladeAndBlunt =
-        GetModuleHandleW(L"BladeAndBlunt.dll") != nullptr;
+    if (!initialized)
+    {
+        ArmorRatingRescaled =
+            GetModuleHandleW(L"ArmorRatingRescaledRemake.dll") != nullptr;
 
-    logger::info(
-        "ArmorRatingRescaled: {}",
-        ArmorRatingRescaled);
+        BladeAndBlunt =
+            GetModuleHandleW(L"BladeAndBlunt.dll") != nullptr;
 
-    logger::info(
-        "BladeAndBlunt: {}",
-        BladeAndBlunt);
+        HandToHand =
+            GetModuleHandleW(L"HandToHand.dll") != nullptr;
 
-    // ChocolatePoise
-    InitializePoiseAPI();
+        logger::info(
+            "ArmorRatingRescaled: {}",
+            ArmorRatingRescaled);
 
-    // Armor resistance setup
-    ArmorResistance::Initialize();
+        logger::info(
+            "BladeAndBlunt: {}",
+            BladeAndBlunt);
+
+        logger::info(
+            "HandToHand: {}",
+            HandToHand);
+
+        InitializePoiseAPI();
+        ArmorResistance::Initialize();
+
+        initialized = true;
+    }
 }

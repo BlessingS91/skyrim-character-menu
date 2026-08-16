@@ -245,8 +245,6 @@ namespace Scaleform
             target->GetRace()->GetDescription(raceDesc, target->GetRace());
         }
         auto height = target->GetHeight();
-        logger::trace("Character info:\n---Name: {}\n---Race: {}\n{}\n---Level: {}\n---Height: {}", name, race,
-                      raceDesc.c_str(), level, height);
 
         // BIRTHSIGN
         auto activeEffects = target->AsMagicTarget()->GetActiveEffectList();
@@ -275,7 +273,6 @@ namespace Scaleform
                 {
                     const auto &info = it->second;
 
-                    logger::trace("Constellation (effect): {}", info.name);
                     constellation = info.name;
                     constellationMessage = RE::TESForm::LookupByEditorID<RE::BGSMessage>(info.descriptionEditorId);
                     constellationMessage->GetDescription(constellationDesc, constellationMessage);
@@ -283,7 +280,6 @@ namespace Scaleform
                     desc = RemoveLastDotSentence(std::move(desc));
                     desc = CollapsePercent(std::move(desc));
                     constellationDesc = desc.c_str();
-                    logger::trace("{}", constellationDesc.c_str());
                     break;
                 }
             }
@@ -302,7 +298,6 @@ namespace Scaleform
             {
                 if (hasStoneSpell(spellEdid))
                 {
-                    logger::trace("Constellation (spell): {}", info.name);
                     constellation = info.name;
                     constellationMessage = RE::TESForm::LookupByEditorID<RE::BGSMessage>(info.descriptionEditorId);
                     constellationMessage->GetDescription(constellationDesc, constellationMessage);
@@ -310,7 +305,6 @@ namespace Scaleform
                     desc = RemoveLastDotSentence(std::move(desc));
                     desc = CollapsePercent(std::move(desc));
                     constellationDesc = desc.c_str();
-                    logger::trace("{}", constellationDesc.c_str());
                     break;
                 }
             }
@@ -363,10 +357,6 @@ namespace Scaleform
         float maxStamina = permanentStamina + temporaryStamina;
         float stamina = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
 
-        logger::trace("Attributes:\n---Health: {}/{} ({})\n---Magicka: {}/{} ({})\n---Stamina: {}/{} ({})", health,
-                      maxHealth, maxHealth - baseHealth, magicka, maxMagicka, maxMagicka - baseMagicka, stamina,
-                      maxStamina, maxStamina - baseStamina);
-
         attributesData[0] = health;
         attributesData[1] = maxHealth;
         attributesData[2] = maxHealth - baseHealth;
@@ -379,19 +369,27 @@ namespace Scaleform
         menu->uiMovie->Invoke("_root.CharacterSheet_mc.SetAttributesMeters", nullptr, attributesData.data(),
                               attributesData.size());
 
-        float healRate = (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealRate) / 100) * maxHealth;
-        float magickaRate = (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagickaRate) / 100) * maxMagicka;
-        float staminaRate = (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStaminaRate) / 100) * maxStamina;
-        float speedMult = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kSpeedMult);
-        // UESP regarding WeaponSpeedMutl AV: "This is an odd modifier because the default is 0 and
-        // yet it is a multiplier, meaning 1 = 100%, 0.5 = 50%, 2 = 200% but 0 = also 100%"
-        float weaponSpeedMultRaw = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kWeaponSpeedMult);
-        //  float weaponSpeedMult = weaponSpeedMultRaw == 0 ? 100 : weaponSpeedMultRaw * 100;
+        float healRate =
+            (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kHealRate) / 100) * maxHealth;
+
+        float magickaRate =
+            (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kMagickaRate) / 100) * maxMagicka;
+
+        float staminaRate =
+            (target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStaminaRate) / 100) * maxStamina;
+
+        float speedMult =
+            target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kSpeedMult);
+
+        float weaponSpeedMultRaw =
+            target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kWeaponSpeedMult);
+
         float weaponSpeedMult =
             weaponSpeedMultRaw == 0.0f
                 ? 100.0f
                 : weaponSpeedMultRaw * 100.0f;
-        // API TESTING - Armor Reduction
+
+        // POISE ARMOR RESISTANCE
         float poiseArmorResist = 0.0f;
 
         if (g_Poise_GetArmorReducedStagger)
@@ -401,18 +399,9 @@ namespace Scaleform
 
             poiseArmorResist =
                 g_Poise_GetArmorReducedStagger(formID, baseStagger);
+        }
 
-            logger::info(
-                "Poise_GetArmorReducedStagger: formID={:08X}, inputStagger={}, reduction={}%",
-                formID,
-                baseStagger,
-                poiseArmorResist);
-        }
-        else
-        {
-            logger::error("Poise_GetArmorReducedStagger function pointer is null.");
-        }
-        // API TESTING - RIGHT HAND DAMAGE
+        // RIGHT HAND POISE DAMAGE
         float rightHandPoiseDamage = 0.0f;
 
         if (g_Poise_GetHandDamage)
@@ -422,19 +411,9 @@ namespace Scaleform
 
             rightHandPoiseDamage =
                 g_Poise_GetHandDamage(formID, leftHand);
-
-            logger::info(
-                "Poise_GetHandDamage: formID={:08X}, leftHand=false, outputDamage={}",
-                formID,
-                rightHandPoiseDamage);
-        }
-        else
-        {
-            logger::error(
-                "Poise_GetHandDamage function pointer is null.");
         }
 
-        // API TESTING - LEFT HAND Poise DAMAGE
+        // LEFT HAND POISE DAMAGE
         float leftHandPoiseDamage = 0.0f;
 
         if (g_Poise_GetHandDamage)
@@ -444,50 +423,30 @@ namespace Scaleform
 
             leftHandPoiseDamage =
                 g_Poise_GetHandDamage(formID, leftHand);
-
-            logger::info(
-                "Poise_GetHandDamage: formID={:08X}, leftHand=true, outputDamage={}",
-                formID,
-                leftHandPoiseDamage);
-        }
-        else
-        {
-            logger::error(
-                "Poise_GetHandDamage function pointer is null.");
         }
 
-        // API TESTING - EFFECTIVE MAGIC RESISTANCE
+        // EFFECTIVE MAGIC RESISTANCE
         float poiseMagicResist = 0.0f;
 
         if (g_Poise_GetEffectiveMagicResistance)
         {
             poiseMagicResist =
                 g_Poise_GetEffectiveMagicResistance(target);
-
-            logger::info(
-                "Poise_GetEffectiveMagicResistance: formID={:08X}, outputResistance={}",
-                target->formID,
-                poiseMagicResist);
-        }
-        else
-        {
-            logger::error(
-                "Poise_GetEffectiveMagicResistance function pointer is null.");
         }
 
         // ARMOR DAMAGE MITIGATION
-        float armorDamageMitigation = 0.0f;
+        float armorDamageMitigation =
+            ArmorResistance::Get(target);
 
-        armorDamageMitigation = ArmorResistance::Get(target);
+        float critChance =
+            CriticalCalcs::GetCriticalChance(target);
 
-        logger::trace(
-            "Armor Damage Mitigation: formID={:08X}, mitigation={}%",
-            target->formID,
-            armorDamageMitigation * 100.0f);
+        float critDamage =
+            CriticalCalcs::GetCriticalDamage(target);
 
-        float critChance = CriticalCalcs::GetCriticalChance(target);
-        float critDamage = CriticalCalcs::GetCriticalDamage(target);
-        float poisonResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kPoisonResist);
+        float poisonResist =
+            target->AsActorValueOwner()->GetActorValue(
+                RE::ActorValue::kPoisonResist);
 
         float magicResist =
             target->AsActorValueOwner()->GetActorValue(
@@ -506,10 +465,21 @@ namespace Scaleform
                 bladeAndBluntSpellResistance * 100.0f;
         }
 
-        float fireResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistFire);
-        float frostResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistFrost);
-        float shockResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistShock);
-        float diseaseResist = target->AsActorValueOwner()->GetActorValue(RE::ActorValue::kResistDisease);
+        float fireResist =
+            target->AsActorValueOwner()->GetActorValue(
+                RE::ActorValue::kResistFire);
+
+        float frostResist =
+            target->AsActorValueOwner()->GetActorValue(
+                RE::ActorValue::kResistFrost);
+
+        float shockResist =
+            target->AsActorValueOwner()->GetActorValue(
+                RE::ActorValue::kResistShock);
+
+        float diseaseResist =
+            target->AsActorValueOwner()->GetActorValue(
+                RE::ActorValue::kResistDisease);
 
         // WEAPON DAMAGE
         float rightHandDamage = 0.0f;
@@ -519,59 +489,60 @@ namespace Scaleform
         {
             auto *player = RE::PlayerCharacter::GetSingleton();
 
-            logger::info(
-                "DAMAGE TEST | IsPlayerRef=true | singleton={}",
-                static_cast<void *>(player));
-
             if (player)
             {
-                rightHandDamage = GetDamage::GetHandDamage(player, false);
-                leftHandDamage = GetDamage::GetHandDamage(player, true);
+                rightHandDamage =
+                    GetDamage::GetHandDamage(player, false);
 
-                logger::info(
-                    "DAMAGE TEST | GetHandDamage returned | right={} | left={}",
-                    rightHandDamage,
-                    leftHandDamage);
-            }
-            else
-            {
-                logger::error("DAMAGE TEST | PlayerCharacter::GetSingleton() returned NULL");
+                leftHandDamage =
+                    GetDamage::GetHandDamage(player, true);
             }
         }
-        else
+
+        if (debugMode)
         {
-            logger::error(
-                "DAMAGE TEST | target is NOT player | formID={:08X}",
-                target->formID);
+            logger::info(
+                "SetStats:\n"
+                "  Health:       {:.2f}/{:.2f} ({:.2f})\n"
+                "  Magicka:      {:.2f}/{:.2f} ({:.2f})\n"
+                "  Stamina:      {:.2f}/{:.2f} ({:.2f})\n"
+                "  Rates:        Heal={:.2f} Magicka={:.2f} Stamina={:.2f}\n"
+                "  Speed:        Move={:.0f} Weapon={:.0f}\n"
+                "  Resistances:  Poison={:.1f} Magic={:.1f} Fire={:.1f} Frost={:.1f} Shock={:.1f} Disease={:.1f}\n"
+                "  Poise:        Right={:.2f} Left={:.2f} Armor={:.1f} Magic={:.1f}\n"
+                "  Mitigation:   Armor={:.1f}%\n"
+                "  Critical:     Chance={:.1f}% Damage={:.1f}%\n"
+                "  Damage:       Right={:.2f} Left={:.2f}",
+                health,
+                maxHealth,
+                maxHealth - baseHealth,
+                magicka,
+                maxMagicka,
+                maxMagicka - baseMagicka,
+                stamina,
+                maxStamina,
+                maxStamina - baseStamina,
+                healRate,
+                magickaRate,
+                staminaRate,
+                speedMult,
+                weaponSpeedMult,
+                poisonResist,
+                magicResist,
+                fireResist,
+                frostResist,
+                shockResist,
+                diseaseResist,
+                rightHandPoiseDamage,
+                leftHandPoiseDamage,
+                poiseArmorResist,
+                poiseMagicResist,
+                armorDamageMitigation * 100.0f,
+                critChance,
+                critDamage * 100.0f,
+                rightHandDamage,
+                leftHandDamage);
         }
-
-        logger::info(
-            "SetStats values: "
-            "Heal={} Magicka={} Stamina={} Speed={} WeaponSpeed={} "
-            "Poison={} Magic={} Fire={} Frost={} Shock={} Disease={} "
-            "RightPoise={} LeftPoise={} PoiseArmor={} PoiseMagic={} "
-            "ArmorMitigation={} CritChance={} CritDamage={} "
-            "RightDamage={} LeftDamage={}",
-            healRate,
-            magickaRate,
-            staminaRate,
-            speedMult,
-            weaponSpeedMult,
-            poisonResist,
-            magicResist,
-            fireResist,
-            frostResist,
-            shockResist,
-            diseaseResist,
-            rightHandPoiseDamage,
-            leftHandPoiseDamage,
-            poiseArmorResist,
-            poiseMagicResist,
-            armorDamageMitigation * 100.0f,
-            critChance,
-            critDamage * 100.0f,
-            rightHandDamage,
-            leftHandDamage);
 
         // STATS
         std::array<RE::GFxValue, 20> statsData;
@@ -638,8 +609,6 @@ namespace Scaleform
             factionObj.SetMember("rank", rankTitle.c_str());
             factionObj.SetMember("rankDisplayOnly", rankOnly);
 
-            logger::info("Faction(JSON): {} ({}) rank={} (rankOnly={})", def.name, def.id, rankTitle, rankOnly);
-
             factionsArray.PushBack(factionObj);
         }
 
@@ -683,7 +652,6 @@ namespace Scaleform
                 auto name = avInfo->GetFullName();
                 RE::BSString description;
                 avInfo->GetDescription(description, avInfo);
-                logger::trace("Description: {}", description.c_str());
                 float value = target->AsActorValueOwner()->GetActorValue(av);
                 // XP
                 int xpFrame = 200;
@@ -717,7 +685,6 @@ namespace Scaleform
                 }
 
                 skillLevels[key] = value; // used for class extrapolation
-                logger::trace("{} ({}): {}\nFrame: {}", name, key, value, xpFrame);
                 skill.SetMember("skillName", name);
                 skill.SetMember("level", value);
                 skill.SetMember("description", description.c_str());
@@ -729,7 +696,6 @@ namespace Scaleform
 
         if (IsPluginLoaded("Constellations") && target->IsPlayerRef())
         {
-            logger::info("Constellations plugin detected, loading additional classes.");
 
             // Hand to Hand
             RE::GFxValue handtohand;
@@ -741,7 +707,6 @@ namespace Scaleform
             handtohand.SetMember("description", "$HandToHand_Description");
             handtohand.SetMember("key", "handToHand");
             handtohand.SetMember("xpFrame", handtohandRatio);
-            logger::trace("Hand-to-hand: {}", handtohandValue);
 
             // Athletics
             RE::GFxValue athletics;
@@ -753,7 +718,6 @@ namespace Scaleform
             athletics.SetMember("description", "$Athletics_Description");
             athletics.SetMember("key", "athletics");
             athletics.SetMember("xpFrame", athleticsRatio);
-            logger::trace("Athletics: {}", athleticsValue);
 
             // Sorcery
             RE::GFxValue sorcery;
@@ -765,7 +729,6 @@ namespace Scaleform
             sorcery.SetMember("description", "$Sorcery_Description");
             sorcery.SetMember("key", "sorcery");
             sorcery.SetMember("xpFrame", sorceryRatio);
-            logger::trace("Sorcery: {}", sorceryValue);
 
             skillsArray.PushBack(handtohand);
             skillsArray.PushBack(athletics);
@@ -777,7 +740,6 @@ namespace Scaleform
 
         if (IsPluginLoaded("Firmament") && target->IsPlayerRef())
         {
-            logger::info("Firmament plugin detected, loading additional classes.");
 
             // Horseman
             RE::GFxValue horseman;
@@ -789,7 +751,6 @@ namespace Scaleform
             horseman.SetMember("description", "$Horseman_Description");
             horseman.SetMember("key", "horseman");
             horseman.SetMember("xpFrame", horsemanRatio);
-            logger::trace("Horseman: {}", horsemanValue);
 
             // Exploration
             RE::GFxValue exploration;
@@ -801,7 +762,6 @@ namespace Scaleform
             exploration.SetMember("description", "$Exploration_Description");
             exploration.SetMember("key", "exploration");
             exploration.SetMember("xpFrame", explorationRatio);
-            logger::trace("Exploration: {}", explorationValue);
 
             // Philosophy
             RE::GFxValue philosophy;
@@ -813,7 +773,6 @@ namespace Scaleform
             philosophy.SetMember("description", "$Philosophy_Description");
             philosophy.SetMember("key", "philosophy");
             philosophy.SetMember("xpFrame", philosophyRatio);
-            logger::trace("Philosophy: {}", philosophyValue);
 
             skillsArray.PushBack(horseman);
             skillsArray.PushBack(exploration);
@@ -845,8 +804,6 @@ namespace Scaleform
         // Overrides
         if (IsModLoaded("Paradigm Reforged.esp"))
         {
-            logger::info("Paradigm Reforged detected, using Paradigm classes.");
-
             match = GetParadigmClass(paradigmReforgedClasses, target);
         }
         else if (IsPluginLoaded("Apprentice"))

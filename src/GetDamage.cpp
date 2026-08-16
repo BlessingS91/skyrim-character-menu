@@ -1,13 +1,13 @@
 #include "GetDamage.h"
 #include "Utility.h"
-
+#include "APIManager.h"
+#include "PCH.h"
 namespace GetDamage
 {
     float GetWeaponDamage(RE::PlayerCharacter *player, bool left)
     {
         if (!player)
         {
-            logger::info("GetWeaponDamage | player=null");
             return 0.0f;
         }
 
@@ -16,84 +16,51 @@ namespace GetDamage
                                 ? equippedObject->As<RE::TESObjectWEAP>()
                                 : nullptr;
 
-        logger::info(
-            "GetWeaponDamage | hand={} | object={} | weapon={}",
-            left ? "left" : "right",
-            static_cast<void *>(equippedObject),
-            static_cast<void *>(weapon));
-
         if (!weapon)
         {
-            logger::info("GetWeaponDamage | no weapon");
             return 0.0f;
         }
 
         const auto equippedEntry = player->GetEquippedEntryData(left);
 
-        logger::info(
-            "GetWeaponDamage | hand={} | weapon={} | entry={}",
-            left ? "left" : "right",
-            weapon->GetName(),
-            static_cast<void *>(equippedEntry));
-
         float damage = 0.0f;
 
         const auto weaponType = weapon->GetWeaponType();
 
-        // ============================================================
-        // ARROW / BOLT DAMAGE
-        // ============================================================
+        // Bow / Crossbow:
+        // Match WidgetEquip exactly.
         if (weaponType == RE::WEAPON_TYPE::kBow ||
             weaponType == RE::WEAPON_TYPE::kCrossbow)
         {
-            const auto ammo = player->GetCurrentAmmo();
-
-            if (ammo)
+            if (const auto ammo = player->GetCurrentAmmo())
             {
-                const float ammoDamage =
-                    ammo->GetRuntimeData().data.damage;
+                float scale = 1.0f;
 
-                damage = ammoDamage;
+                RE::BGSEntryPoint::HandleEntryPoint(
+                    RE::BGSEntryPoint::ENTRY_POINT::kModAttackDamage,
+                    player,
+                    nullptr,
+                    nullptr,
+                    &scale);
 
-                logger::info(
-                    "GetWeaponDamage | {} | ammo={} | ammoDamage={} | damage={}",
-                    weaponType == RE::WEAPON_TYPE::kBow
-                        ? "bow"
-                        : "crossbow",
-                    ammo->GetName(),
-                    ammoDamage,
-                    damage);
-            }
-            else
-            {
-                logger::info(
-                    "GetWeaponDamage | {} | no current ammo",
-                    weaponType == RE::WEAPON_TYPE::kBow
-                        ? "bow"
-                        : "crossbow");
+                damage = ammo->data.damage * scale;
             }
         }
 
-        // ============================================================
-        // WEAPON DAMAGE
-        // ============================================================
+        // Normal weapon damage:
+        // Same calculation used by WidgetEquip::MakeWeaponInfo().
         if (equippedEntry)
         {
-            const float weaponDamage =
-                player->GetDamage(equippedEntry);
-
-            logger::info(
-                "GetWeaponDamage | GetDamage={} | previous={} | final={}",
-                weaponDamage,
-                damage,
-                damage + weaponDamage);
-
-            damage += weaponDamage;
+            damage += player->GetDamage(equippedEntry);
         }
-        else
+
+        if (debugMode)
         {
             logger::info(
-                "GetWeaponDamage | equippedEntry=null");
+                "GetWeaponDamage | Hand={} | Weapon={} | Damage={}",
+                left ? "Left" : "Right",
+                weapon->GetName(),
+                damage);
         }
 
         return damage;
@@ -231,143 +198,92 @@ namespace GetDamage
         return scroll->effects[0]->effectItem.magnitude * scale;
     }
 
+    float GetUnarmedDamage(RE::PlayerCharacter *player, RE::TESObjectWEAP *unarmedWeapon = nullptr)
+    {
+        if (!player)
+        {
+            return 0.0f;
+        }
+
+        auto *actorValueOwner = player->AsActorValueOwner();
+        if (!actorValueOwner)
+        {
+            return 0.0f;
+        }
+
+        auto scale =
+            actorValueOwner->GetActorValue(RE::ActorValue::kUnarmedDamage) *
+            actorValueOwner->GetActorValue(RE::ActorValue::kAttackDamageMult);
+
+        RE::BGSEntryPoint::HandleEntryPoint(
+            RE::BGSEntryPoint::ENTRY_POINT::kModAttackDamage,
+            player,
+            unarmedWeapon, // Pass the 0x1F4 weapon form here!
+            nullptr,
+            &scale);
+
+        return scale;
+    }
+
     float GetHandDamage(RE::PlayerCharacter *player, bool left)
     {
         if (!player)
         {
-            logger::info("GetHandDamage | player=null");
             return 0.0f;
         }
 
         const auto equippedObject = player->GetEquippedObject(left);
 
-        logger::info(
-            "GetHandDamage | hand={} | equippedObject={}",
-            left ? "left" : "right",
-            static_cast<void *>(equippedObject));
-
-        // ============================================================
-        // UNARMED
-        // ============================================================
+        // Nothing equipped = unarmed.
         if (!equippedObject)
         {
-            const float unarmedDamage =
-                player->AsActorValueOwner()->GetActorValue(
-                    RE::ActorValue::kUnarmedDamage);
-
-            const float attackDamageMult =
-                player->AsActorValueOwner()->GetActorValue(
-                    RE::ActorValue::kAttackDamageMult);
-
-            float damage = unarmedDamage * attackDamageMult;
-
-            // Hand to Hand adds 0.35 damage per point of Hand to Hand.
-            const float handToHand =
-                player->AsActorValueOwner()->GetActorValue(
-                    RE::ActorValue::kLockpicking);
-
-            damage += handToHand * 0.35f;
-
-            RE::BGSEntryPoint::HandleEntryPoint(
-                RE::BGSEntryPoint::ENTRY_POINT::kModAttackDamage,
-                player,
-                nullptr,
-                nullptr,
-                &damage);
-
-            return damage;
+            return GetUnarmedDamage(player);
         }
-        // ============================================================
-        // WEAPON
-        // ============================================================
+
+        // Weapon / Staff / Unarmed
         if (const auto weapon = equippedObject->As<RE::TESObjectWEAP>())
         {
-            logger::info(
-                "GetHandDamage | {} weapon | name={} | type={}",
-                left ? "left" : "right",
-                weapon->GetName(),
-                static_cast<int>(weapon->GetWeaponType()));
+            // Skyrim's built-in Unarmed weapon.
+            if (weapon->formID == 0x000001F4)
+            {
+                return GetUnarmedDamage(player, weapon);
+            }
 
-            // Two-handed weapons and bows use the right-hand damage
-            // for both sides of the character sheet.
             const auto weaponType = weapon->GetWeaponType();
 
-            const bool isTwoHanded =
-                weaponType == RE::WEAPON_TYPE::kTwoHandSword ||
+            // Two-handed weapon.
+            // Both hands should display the same damage.
+            if (weaponType == RE::WEAPON_TYPE::kTwoHandSword ||
                 weaponType == RE::WEAPON_TYPE::kTwoHandAxe ||
                 weaponType == RE::WEAPON_TYPE::kBow ||
-                weaponType == RE::WEAPON_TYPE::kCrossbow;
-
-            if (isTwoHanded)
+                weaponType == RE::WEAPON_TYPE::kCrossbow)
             {
-                const float damage = GetWeaponDamage(player, false);
-
-                logger::info(
-                    "GetHandDamage | {} two-handed | using right-hand damage={}",
-                    left ? "left" : "right",
-                    damage);
-
-                return damage;
+                return GetWeaponDamage(player, false);
             }
 
-            // Staffs use their enchantment magnitude rather than
-            // physical weapon damage.
+            // Staff
             if (weaponType == RE::WEAPON_TYPE::kStaff)
             {
-                const float damage = GetStaffDamage(player, left);
-
-                logger::info(
-                    "GetHandDamage | {} staff | damage={}",
-                    left ? "left" : "right",
-                    damage);
-
-                return damage;
+                return GetStaffDamage(player, left);
             }
 
-            const float damage = GetWeaponDamage(player, left);
-
-            logger::info(
-                "GetHandDamage | {} weapon | final={}",
-                left ? "left" : "right",
-                damage);
-
-            return damage;
+            // One-handed weapon
+            return GetWeaponDamage(player, left);
         }
 
-        // ============================================================
-        // SPELL
-        // ============================================================
+        // Spell
         if (equippedObject->As<RE::SpellItem>())
         {
-            const float damage = GetSpellDamage(player, left);
-
-            logger::info(
-                "GetHandDamage | {} spell | final={}",
-                left ? "left" : "right",
-                damage);
-
-            return damage;
+            return GetSpellDamage(player, left);
         }
 
-        // ============================================================
-        // SCROLL
-        // ============================================================
+        // Scroll
         if (equippedObject->As<RE::ScrollItem>())
         {
-            const float damage = GetScrollDamage(player, left);
-
-            logger::info(
-                "GetHandDamage | {} scroll | final={}",
-                left ? "left" : "right",
-                damage);
-
-            return damage;
+            return GetScrollDamage(player, left);
         }
 
-        logger::info(
-            "GetHandDamage | {} | unknown equipped object type -> 0",
-            left ? "left" : "right");
-
-        return 0.0f;
+        // Anything else = unarmed.
+        return GetUnarmedDamage(player);
     }
 }

@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include <toml++/toml.hpp>
+#include "Utility.h"
 
 namespace ARRConfig
 {
@@ -303,17 +304,30 @@ namespace ArmorResistance
             return 0.0f;
         }
 
+        float resistance;
+
         if (APIs::ArmorRatingRescaled)
         {
-            return CalculateArmorRatingRescaled(actor);
+            resistance = CalculateArmorRatingRescaled(actor);
         }
-
-        if (APIs::BladeAndBlunt)
+        else if (APIs::BladeAndBlunt)
         {
-            return CalculateBladeAndBlunt(actor);
+            resistance = CalculateBladeAndBlunt(actor);
+        }
+        else
+        {
+            resistance = CalculateVanilla(actor);
         }
 
-        return CalculateVanilla(actor);
+        if (debugMode)
+        {
+            SKSE::log::info(
+                "ArmorResistance: formID={:08X} | resistance={}%",
+                actor->formID,
+                resistance * 100.0f);
+        }
+
+        return resistance;
     }
 
     float GetBladeAndBluntSpellResistance(float armorRating)

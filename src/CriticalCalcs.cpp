@@ -6,7 +6,6 @@
 #include <Windows.h>
 #include <fstream>
 #include <string>
-
 #include <filesystem>
 
 #include <Utility.h>
@@ -36,11 +35,6 @@ namespace CriticalCalcs
 
         if (!file.is_open())
         {
-            logger::warn(
-                "CriticalCalcs: Could not open ComprehensiveCriticalDamageFix.ini. "
-                "Using default multiplier {}.",
-                defaultMultiplier);
-
             return defaultMultiplier;
         }
 
@@ -141,30 +135,13 @@ namespace CriticalCalcs
 
             try
             {
-                const float multiplier = std::stof(value);
-
-                logger::info(
-                    "CriticalCalcs: Critical damage multiplier = {}",
-                    multiplier);
-
-                return multiplier;
+                return std::stof(value);
             }
             catch (const std::exception &)
             {
-                logger::warn(
-                    "CriticalCalcs: Invalid fCriticalDamageMultiplier '{}'. "
-                    "Using default multiplier {}.",
-                    value,
-                    defaultMultiplier);
-
                 return defaultMultiplier;
             }
         }
-
-        logger::warn(
-            "CriticalCalcs: fCriticalDamageMultiplier not found. "
-            "Using default multiplier {}.",
-            defaultMultiplier);
 
         return defaultMultiplier;
     }
@@ -188,6 +165,7 @@ namespace CriticalCalcs
                 ReadCriticalDamageMultiplier();
         }
     }
+
     float GetCriticalChance(RE::Actor *actor)
     {
         if (!actor)
@@ -241,19 +219,25 @@ namespace CriticalCalcs
 
         if (result != PEPE::RequestResult::Success)
         {
-            logger::warn(
-                "CalculateMyCriticalHitChance failed: {}",
-                static_cast<int>(result));
+            if (debugMode)
+            {
+                logger::info(
+                    "CriticalCalcs: CalculateMyCriticalHitChance failed: {}",
+                    static_cast<int>(result));
+            }
         }
 
         const float totalCritChance =
             actorValueCritChance + perkCritChance;
 
-        logger::info(
-            "CriticalCalcs: CritChance | ActorValue={} | Perk={} | Total={}",
-            actorValueCritChance,
-            perkCritChance,
-            totalCritChance);
+        if (debugMode)
+        {
+            logger::info(
+                "CriticalCalcs: CritChance | ActorValue={} | Perk={} | Total={}",
+                actorValueCritChance,
+                perkCritChance,
+                totalCritChance);
+        }
 
         return totalCritChance;
     }
@@ -277,7 +261,13 @@ namespace CriticalCalcs
             }
         }
 
-        float perkCritDamage = 0.0f;
+        // Comprehensive Critical Damage Fix:
+        // 0.5 = +50% weapon damage
+        //
+        // Convert that into the actual critical multiplier:
+        // 1.0 + 0.5 = 1.5
+        float criticalDamage =
+            1.0f + g_criticalDamageMultiplier;
 
         if (APIs::PEPE)
         {
@@ -290,32 +280,29 @@ namespace CriticalCalcs
                     actor,
                     RE::PerkEntryPoint::kCalculateMyCriticalHitDamage,
                     std::span<RE::TESForm *>(args),
-                    &perkCritDamage,
+                    &criticalDamage,
                     "",
                     0,
                     PEPE::EntryPointFlag::None);
 
             if (result != PEPE::RequestResult::Success)
             {
-                logger::warn(
-                    "CalculateMyCriticalHitDamage failed: {}",
-                    static_cast<int>(result));
+                if (debugMode)
+                {
+                    logger::info(
+                        "CriticalCalcs: CalculateMyCriticalHitDamage failed: {}",
+                        static_cast<int>(result));
+                }
             }
         }
 
-        // Base critical damage.
-        float criticalDamage =
-            1.0f + g_criticalDamageMultiplier;
-
-        // Perk critical-damage modifiers are percentage increases.
-        criticalDamage *=
-            1.0f + perkCritDamage;
-
-        logger::info(
-            "CriticalCalcs: Crit Damage | BaseMultiplier={} | PerkModifier={} | FinalMultiplier={}",
-            g_criticalDamageMultiplier,
-            perkCritDamage,
-            criticalDamage);
+        if (debugMode)
+        {
+            logger::info(
+                "CriticalCalcs: CritDamage | Base={} | Final={}",
+                1.0f + g_criticalDamageMultiplier,
+                criticalDamage);
+        }
 
         return criticalDamage;
     }

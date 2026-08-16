@@ -26,6 +26,7 @@ int navRightGamepadKey;
 int enableBlur;
 bool g_isUltraWide = false;
 bool lowercaseName = false;
+bool debugMode = false;
 
 RE::Actor *targetActor;
 bool forced3rdPerson;
@@ -73,13 +74,21 @@ void SetupLog()
     auto logsFolder = SKSE::log::log_directory();
     if (!logsFolder)
         SKSE::stl::report_and_fail("SKSE log_directory not provided, logs disabled.");
+
     auto pluginName = SKSE::PluginDeclaration::GetSingleton()->GetName();
     auto logFilePath = *logsFolder / std::format("{}.log", pluginName);
-    auto fileLoggerPtr = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFilePath.string(), true);
-    auto loggerPtr = std::make_shared<spdlog::logger>("log", std::move(fileLoggerPtr));
+
+    auto fileLoggerPtr =
+        std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFilePath.string(), true);
+
+    auto loggerPtr =
+        std::make_shared<spdlog::logger>("log", std::move(fileLoggerPtr));
+
     spdlog::set_default_logger(std::move(loggerPtr));
-    spdlog::set_level(spdlog::level::trace);
-    spdlog::flush_on(spdlog::level::trace);
+
+    // Initial level while loading configuration.
+    spdlog::set_level(spdlog::level::info);
+    spdlog::flush_on(spdlog::level::info);
 }
 
 float GetPlayerXPProgression()
@@ -127,7 +136,6 @@ int GetPlayerGold()
     auto it = invCounts.find(goldObject);
     int totalGold = (it != invCounts.end()) ? it->second : 0;
 
-    logger::trace("Player has {} gold.", totalGold);
     return totalGold;
 }
 
@@ -322,6 +330,19 @@ void LoadDataFromINI()
     enableBlur = std::stoi(enable_blur);
     logger::debug("Loaded keycode: {}", keycodeStr);
     logger::debug("Loaded blur enabled: {}", enable_blur);
+
+    debugMode = ini.GetBoolValue("General", "bDebugMode", false);
+
+    spdlog::set_level(
+        debugMode ? spdlog::level::trace : spdlog::level::info);
+
+    spdlog::flush_on(
+        debugMode ? spdlog::level::trace : spdlog::level::info);
+
+    logger::info("INI path: {}", INI_FILE_PATH);
+    logger::info("INI bDebugMode raw value: '{}'",
+                 ini.GetValue("General", "bDebugMode", "<MISSING>"));
+    logger::info("INI debugMode parsed value: {}", debugMode);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -683,7 +704,6 @@ const TESClass *GetBestMatchingClass(const std::vector<TESClass> &classes,
             bestMatch = &tesClass;
         }
     }
-    logger::info("Selected class for Player: {}", bestMatch->name);
     return bestMatch;
 }
 
@@ -952,7 +972,6 @@ static bool IsQuestStageAtLeast(const std::string &questEdid, std::int32_t requi
     auto *quest = RE::TESForm::LookupByEditorID<RE::TESQuest>(questEdid);
     if (!quest)
     {
-        logger::warn("FactionRanks: quest not found by EDID: {}", questEdid);
         return false;
     }
 

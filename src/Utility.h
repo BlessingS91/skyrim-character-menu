@@ -26,6 +26,7 @@ extern int navRightGamepadKey;
 extern int enableBlur;
 extern bool g_isUltraWide;
 extern bool lowercaseName;
+extern bool debugMode;
 
 inline std::string g_savedTitleRank;
 inline std::string g_savedTitleFaction;

@@ -28,6 +28,7 @@ struct APIs
 
     static inline bool ArmorRatingRescaled = false;
     static inline bool BladeAndBlunt = false;
+    static inline bool HandToHand = false;
 
     static void RequestAPIs();
 };

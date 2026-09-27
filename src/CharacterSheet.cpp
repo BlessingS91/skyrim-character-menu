@@ -805,11 +805,17 @@ namespace Scaleform
         if (IsModLoaded("Paradigm Reforged.esp"))
         {
             match = GetParadigmClass(paradigmReforgedClasses, target);
+            logger::info("CharacterSheet INIT | Paradigm Reforged class: {}", match ? match->name : "<NULL>");
         }
         else if (IsPluginLoaded("Apprentice"))
         {
             match = GetApprenticeClass(apprenticeClasses);
             traitMatch = GetApprenticeTrait(apprenticeTraits);
+            logger::info("CharacterSheet INIT | Apprentice class: {}", match ? match->name : "<NULL>");
+        }
+        else
+        {
+            logger::info("CharacterSheet INIT | No class overhaul detected");
         }
 
         std::array<RE::GFxValue, 6> skillsData;

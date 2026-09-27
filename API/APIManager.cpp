@@ -11,15 +11,14 @@ Poise_GetHandDamage_t g_Poise_GetHandDamage = nullptr;
 
 bool InitializePoiseAPI()
 {
-    HMODULE module = GetModuleHandleW(L"ChocolatePoise.dll");
+    HMODULE module = GetModuleHandleW(L"ChocolatePoiseReforged.dll");
 
     if (!module)
     {
-        SKSE::log::info("ChocolatePoise.dll is not loaded.");
+        SKSE::log::info("ChocolatePoiseReforged.dll is not loaded.");
         return false;
     }
 
-    // Notice the added "g_" prefix here!
     g_Poise_GetArmorReducedStagger =
         reinterpret_cast<Poise_GetArmorReducedStagger_t>(
             GetProcAddress(module, "Poise_GetArmorReducedStagger"));
@@ -36,11 +35,11 @@ bool InitializePoiseAPI()
         !g_Poise_GetEffectiveMagicResistance ||
         !g_Poise_GetHandDamage)
     {
-        SKSE::log::error("Failed to resolve ChocolatePoise API.");
+        SKSE::log::error("Failed to resolve ChocolatePoiseReforged API.");
         return false;
     }
 
-    SKSE::log::info("ChocolatePoise API resolved successfully.");
+    SKSE::log::info("ChocolatePoiseReforged API resolved successfully.");
     return true;
 }
 
@@ -95,7 +94,10 @@ void APIs::RequestAPIs()
         SKSE::log::info("BladeAndBlunt: {}", BladeAndBlunt);
         SKSE::log::info("HandToHand: {}", HandToHand);
 
-        InitializePoiseAPI();
+        if (!InitializePoiseAPI())
+        {
+            SKSE::log::error("ChocolatePoiseReforged API initialization failed.");
+        }
         ArmorResistance::Initialize();
 
         initialized = true;

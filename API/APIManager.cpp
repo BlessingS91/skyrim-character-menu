@@ -1,8 +1,8 @@
 #include "APIManager.h"
 #include "Utility.h"
-#include "ArmorResistance.h"
-#include "PoiseAPI.h"
+#include "PCH.h"
 
+// Define the extern variables here so the linker can find them
 SmoothCamAPI::IVSmoothCam2 *g_SmoothCam = nullptr;
 
 Poise_GetArmorReducedStagger_t g_Poise_GetArmorReducedStagger = nullptr;
@@ -15,10 +15,11 @@ bool InitializePoiseAPI()
 
     if (!module)
     {
-        logger::info("ChocolatePoise.dll is not loaded.");
+        SKSE::log::info("ChocolatePoise.dll is not loaded.");
         return false;
     }
 
+    // Notice the added "g_" prefix here!
     g_Poise_GetArmorReducedStagger =
         reinterpret_cast<Poise_GetArmorReducedStagger_t>(
             GetProcAddress(module, "Poise_GetArmorReducedStagger"));
@@ -35,11 +36,11 @@ bool InitializePoiseAPI()
         !g_Poise_GetEffectiveMagicResistance ||
         !g_Poise_GetHandDamage)
     {
-        logger::error("Failed to resolve ChocolatePoise API.");
+        SKSE::log::error("Failed to resolve ChocolatePoise API.");
         return false;
     }
 
-    logger::info("ChocolatePoise API resolved successfully.");
+    SKSE::log::info("ChocolatePoise API resolved successfully.");
     return true;
 }
 
@@ -50,45 +51,34 @@ void APIs::RequestAPIs()
     {
         if (!SmoothCamAPI::RegisterInterfaceLoaderCallback(
                 SKSE::GetMessagingInterface(),
-                [](void *interfaceInstance,
-                   SmoothCamAPI::InterfaceVersion interfaceVersion)
+                [](void *interfaceInstance, SmoothCamAPI::InterfaceVersion interfaceVersion)
                 {
-                    if (interfaceVersion ==
-                        SmoothCamAPI::InterfaceVersion::V2)
+                    if (interfaceVersion == SmoothCamAPI::InterfaceVersion::V2)
                     {
-                        SmoothCam =
-                            reinterpret_cast<SmoothCamAPI::IVSmoothCam2 *>(
-                                interfaceInstance);
-
+                        SmoothCam = reinterpret_cast<SmoothCamAPI::IVSmoothCam2 *>(interfaceInstance);
                         g_SmoothCam = SmoothCam;
-
-                        logger::info("Obtained SmoothCamAPI");
+                        SKSE::log::info("Obtained SmoothCamAPI");
                     }
                 }))
         {
-            logger::warn(
-                "SmoothCamAPI::RegisterInterfaceLoaderCallback reported an error");
+            SKSE::log::warn("SmoothCamAPI::RegisterInterfaceLoaderCallback reported an error");
         }
 
         if (!SmoothCamAPI::RequestInterface(
                 SKSE::GetMessagingInterface(),
                 SmoothCamAPI::InterfaceVersion::V2))
         {
-            logger::warn(
-                "SmoothCamAPI::RequestInterface reported an error");
+            SKSE::log::warn("SmoothCamAPI::RequestInterface reported an error");
         }
     }
 
     // PEPE
     if (!PEPE)
     {
-        PEPE =
-            PerkEntryPointExtenderAPI::RequestInterface<
-                PerkEntryPointExtenderAPI::InterfaceVersion2>();
-
+        PEPE = PerkEntryPointExtenderAPI::RequestInterface<PerkEntryPointExtenderAPI::InterfaceVersion2>();
         if (PEPE)
         {
-            logger::info("Obtained PerkEntryPointExtender API V2");
+            SKSE::log::info("Obtained PerkEntryPointExtender API V2");
         }
     }
 
@@ -97,26 +87,13 @@ void APIs::RequestAPIs()
 
     if (!initialized)
     {
-        ArmorRatingRescaled =
-            GetModuleHandleW(L"ArmorRatingRescaledRemake.dll") != nullptr;
+        ArmorRatingRescaled = GetModuleHandleW(L"ArmorRatingRescaledRemake.dll") != nullptr;
+        BladeAndBlunt = GetModuleHandleW(L"BladeAndBlunt.dll") != nullptr;
+        HandToHand = GetModuleHandleW(L"HandToHand.dll") != nullptr;
 
-        BladeAndBlunt =
-            GetModuleHandleW(L"BladeAndBlunt.dll") != nullptr;
-
-        HandToHand =
-            GetModuleHandleW(L"HandToHand.dll") != nullptr;
-
-        logger::info(
-            "ArmorRatingRescaled: {}",
-            ArmorRatingRescaled);
-
-        logger::info(
-            "BladeAndBlunt: {}",
-            BladeAndBlunt);
-
-        logger::info(
-            "HandToHand: {}",
-            HandToHand);
+        SKSE::log::info("ArmorRatingRescaled: {}", ArmorRatingRescaled);
+        SKSE::log::info("BladeAndBlunt: {}", BladeAndBlunt);
+        SKSE::log::info("HandToHand: {}", HandToHand);
 
         InitializePoiseAPI();
         ArmorResistance::Initialize();

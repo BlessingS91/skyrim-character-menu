@@ -43,7 +43,7 @@ namespace GetDamage
                     nullptr,
                     &scale);
 
-                damage = ammo->data.damage * scale;
+                damage = ammo->GetRuntimeData().data.damage * scale;
             }
         }
 

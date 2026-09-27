@@ -644,7 +644,7 @@ namespace Scaleform
         menu->uiMovie->CreateArray(&skillsArray);
         for (auto av : skills)
         {
-            auto avInfo = avList->GetActorValue(av);
+            auto avInfo = avList->GetActorValueInfo(av);
             if (avInfo)
             {
                 RE::GFxValue skill;

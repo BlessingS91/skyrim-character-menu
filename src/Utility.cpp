@@ -357,7 +357,8 @@ void RotateCamera(RE::Actor *target)
     bool isVampireLord = false;
     camera->cameraTarget = target;
 
-    auto thirdState = (RE::ThirdPersonState *)camera->cameraStates[RE::CameraState::kThirdPerson].get();
+    auto *thirdState = static_cast<RE::ThirdPersonState *>(
+        camera->GetRuntimeData().cameraStates[RE::CameraState::kThirdPerson].get());
 
     if (target->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("WerewolfBeastRace") ||
         target->GetRace() == RE::TESForm::LookupByEditorID<RE::TESRace>("DLC2WerebearBeastRace"))
@@ -409,7 +410,7 @@ void RotateCamera(RE::Actor *target)
     fMouseWheelZoomSpeed = mouseWheelZoomSpeed->GetFloat();
     fTogglePOVDelay = togglePOVDelay->GetFloat();
 
-    worldFOV = camera->worldFOV;
+    worldFOV = camera->GetRuntimeData2().worldFOV;
     target->GetGraphVariableBool("IsNPC", playerHeadtrackingEnabled);
 
     // temporarily disable headtracking if enabled
@@ -548,7 +549,7 @@ void RotateCamera(RE::Actor *target)
     thirdState->posOffsetExpected = thirdState->posOffsetActual =
         RE::NiPoint3(fNewOverShoulderCombatPosX, fNewOverShoulderCombatAddY, fNewOverShoulderCombatPosZ);
 
-    camera->worldFOV = 50.f;
+    camera->GetRuntimeData2().worldFOV = 50.f;
 
     camera->Update();
 
@@ -572,16 +573,21 @@ void RotateCamera(RE::Actor *target)
 void ResetCamera()
 {
     auto camera = RE::PlayerCamera::GetSingleton();
-    auto thirdState = (RE::ThirdPersonState *)camera->cameraStates[RE::CameraState::kThirdPerson].get();
+
+    auto *thirdState = static_cast<RE::ThirdPersonState *>(
+        camera->GetRuntimeData().cameraStates[RE::CameraState::kThirdPerson].get());
+
     auto *player = RE::PlayerCharacter::GetSingleton();
 
     if (forced3rdPerson)
     {
-        // to cameraState = (RE::TESCameraState*)camera->cameraStates[m_camStateId].get();
         const auto firstPersonState =
-            static_cast<RE::FirstPersonState *>(camera->cameraStates[RE::CameraState::kFirstPerson].get());
+            static_cast<RE::FirstPersonState *>(
+                camera->GetRuntimeData().cameraStates[RE::CameraState::kFirstPerson].get());
+
         camera->SetState(firstPersonState);
     }
+
     if (g_prevState)
     {
         camera->SetState(g_prevState);
@@ -597,7 +603,9 @@ void ResetCamera()
     thirdState->freeRotation = freeRotation;
     vanityModeMinDist->data.f = fVanityModeMinDist;
     vanityModeMaxDist->data.f = fVanityModeMaxDist;
-    camera->worldFOV = worldFOV;
+
+    camera->GetRuntimeData2().worldFOV = worldFOV;
+
     thirdState->posOffsetExpected = thirdState->posOffsetActual = posOffsetExpected;
     overShoulderCombatPosX->data.f = fOverShoulderCombatPosX;
     overShoulderCombatAddY->data.f = fOverShoulderCombatAddY;
@@ -605,59 +613,57 @@ void ResetCamera()
     overShoulderPosX->data.f = fOverShoulderPosX;
     overShoulderPosZ->data.f = fOverShoulderPosZ;
     targetActor->SetGraphVariableBool("IsNPC", playerHeadtrackingEnabled);
-
     forced3rdPerson = false;
-
     camera->cameraTarget = player;
-
     camera->Update();
 
-    // camera->Update() function uses this value, so restore it after we've updated the camera
     mouseWheelZoomSpeed->data.f = fMouseWheelZoomSpeed;
-
     rotatedPlayer = false;
 
-    // setting timescale back to its former value
     RE::TESForm::LookupByID<RE::TESGlobal>(0x3A)->value = timescale;
 
-    // re-enables AI
     auto processLists = RE::ProcessLists::GetSingleton();
+
     if (processLists)
     {
         for (auto handle : processLists->highActorHandles)
         {
             auto actor = handle.get().get();
+
             if (!actor || actor == targetActor || IsTargetsMount(actor, targetActor) || IsMannequin(actor))
                 continue;
+
             UnfreezeNPC(actor);
         }
     }
 
-    // set to player for safety, but in theory could be nullptr
     targetActor = player;
 }
 
 // credit goes to powerofthree for the freeze and unfreeze functions (https://github.com/powerof3/ClassicParalysis)
 void FreezeNPC(RE::Actor *a_actor)
 {
-
     if (const auto currentProcess = a_actor->GetActorRuntimeData().currentProcess)
     {
-        if (currentProcess->high->unk470 || currentProcess->high->approachingAutoTeleportDoor || currentProcess->high->fadeState == RE::HighProcessData::FADE_STATE::kTeleportOut) // unk470 = doorActivated
+        if (currentProcess->high->doorActivated ||
+            currentProcess->high->approachingAutoTeleportDoor ||
+            currentProcess->high->fadeState == RE::HighProcessData::FADE_STATE::kTeleportOut)
         {
             // If going through load door we do not want to freeze
             return;
         }
+
         currentProcess->ClearMuzzleFlashes();
     }
 
-    a_actor->PauseCurrentDialogue();
-    a_actor->GetActorRuntimeData().boolFlags.reset(RE::Actor::BOOL_FLAGS::kShouldAnimGraphUpdate);
+    a_actor->StopCurrentDialogue();
+
+    a_actor->GetActorRuntimeData().boolFlags.reset(
+        RE::Actor::BOOL_FLAGS::kShouldAnimGraphUpdate);
 
     if (const auto charController = a_actor->GetCharController(); charController)
     {
         charController->flags.set(RE::CHARACTER_FLAGS::kNotPushable);
-
         charController->flags.reset(RE::CHARACTER_FLAGS::kRecordHits);
         charController->flags.reset(RE::CHARACTER_FLAGS::kHitFlags);
     }
